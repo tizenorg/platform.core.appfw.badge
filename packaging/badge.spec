@@ -29,7 +29,7 @@ Badge library (devel).
 
 %build
 export LDFLAGS+="-Wl,--rpath=%{_prefix}/lib -Wl,--as-needed"
-LDFLAGS="$LDFLAGS" cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
+LDFLAGS="$LDFLAGS" %cmake . 
 make %{?jobs:-j%jobs}
 
 %install

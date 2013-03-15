@@ -30,7 +30,7 @@
 #ifdef LOG_TAG
 #undef LOG_TAG
 #endif
-#define LOG_TAG "libbadge"
+#define LOG_TAG "BADGE"
 
 #define DBG(fmt , args...) \
 	do { \
