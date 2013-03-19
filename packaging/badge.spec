@@ -28,7 +28,7 @@ Requires:   %{name} = %{version}-%{release}
 Badge library (devel).
 
 %build
-export LDFLAGS+="-Wl,--rpath=%{_prefix}/lib -Wl,--as-needed"
+export LDFLAGS+="-Wl,--rpath=%{_libdir} -Wl,--as-needed"
 LDFLAGS="$LDFLAGS" %cmake . 
 make %{?jobs:-j%jobs}
 
