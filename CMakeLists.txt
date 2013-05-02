@@ -16,11 +16,14 @@ SET(CMAKE_SKIP_BUILD_RPATH true)
 
 SET(INSTALL_HEADERS
 	badge.h
+	badge_db.h
 	badge_error.h
 )
 
 SET(SRCS
 	src/badge.c
+	src/badge_db.c
+	src/badge_ipc.c
 	src/badge_internal.c
 )
 
@@ -35,6 +38,8 @@ pkg_check_modules(pkgs REQUIRED
 	dlog
 	dbus-1
 	dbus-glib-1
+	vconf
+	com-core
 )
 
 FOREACH(flag ${pkgs_CFLAGS})

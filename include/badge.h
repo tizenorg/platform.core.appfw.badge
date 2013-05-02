@@ -54,6 +54,7 @@ enum _badge_action {
 	BADGE_ACTION_REMOVE,
 	BADGE_ACTION_UPDATE,
 	BADGE_ACTION_CHANGED_DISPLAY,
+	BADGE_ACTION_SERVICE_READY,
 };
 
 
@@ -296,6 +297,14 @@ badge_error_e badge_register_changed_cb(badge_change_cb callback, void *data);
  * @see badge_register_changed_cb()
  */
 badge_error_e badge_unregister_changed_cb(badge_change_cb callback);
+
+int badge_is_service_ready(void);
+
+badge_error_e badge_add_deffered_task(
+		void (*deffered_task_cb)(void *data), void *user_data);
+
+badge_error_e badge_del_deffered_task(
+		void (*deffered_task_cb)(void *data));
 
 #ifdef __cplusplus
 }

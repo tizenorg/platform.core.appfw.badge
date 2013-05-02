@@ -21,43 +21,24 @@
  */
 
 
-#ifndef __BADGE_ERROR_DEF_H__
-#define __BADGE_ERROR_DEF_H__
+#ifndef __BADGE_DB_DEF_H__
+#define __BADGE_DB_DEF_H__
+
+#include <stdbool.h>
+#include <badge_error.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE_TYPE badge type
- * @brief Badge type
- */
-
-/**
- * @addtogroup BADGE_TYPE
- * @{
- */
-
-/**
- * @breief Enumeration for Badge error
- */
-typedef enum _badge_error_e {
-	BADGE_ERROR_NONE = 0,			/**< Success */
-	BADGE_ERROR_INVALID_DATA = -1,		/**< Invalid parameter */
-	BADGE_ERROR_NO_MEMORY = -2,		/**< No memory */
-	BADGE_ERROR_FROM_DB = -3,		/**< Error from DB */
-	BADGE_ERROR_ALREADY_EXIST = -4,		/**< Already exist */
-	BADGE_ERROR_FROM_DBUS = -5,		/**< Error from DBus */
-	BADGE_ERROR_NOT_EXIST = -6,		/**< Not exist */
-	BADGE_ERROR_PERMISSION_DENIED = -7,	/**< Permission denied */
-	BADGE_ERROR_IO = -8,	/**< Error from I/O */
-	BADGE_ERROR_SERVICE_NOT_READY = -9,	/**< Error service not ready */
-} badge_error_e;
+badge_error_e badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller);
+badge_error_e badge_db_delete(const char *pkgname, const char *caller_pkg);
+badge_error_e badge_db_set_count(const char *pkgname, const char *caller_pkg, int count);
+badge_error_e badge_db_set_display_option(const char *pkgname, const char *caller_pkg, int is_display);
 
 #ifdef __cplusplus
 	}
 #endif
 
-#endif /* __BADGE_ERROR_DEF_H__ */
+#endif /* __BADGE_DB_DEF_H__ */
 

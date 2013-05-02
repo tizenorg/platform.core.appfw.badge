@@ -27,45 +27,23 @@
 #include "badge_log.h"
 #include "badge_error.h"
 #include "badge_internal.h"
+#include "badge_ipc.h"
 
 EXPORT_API
 badge_error_e badge_create(const char *pkgname, const char *writable_pkg)
 {
+	char *caller = NULL;
 	badge_error_e err = BADGE_ERROR_NONE;
-	badge_h *badge = NULL;
-	char *pkgs = NULL;
 
-	if (!pkgname) {
-		WARN("package name is NULL");
-		return BADGE_ERROR_INVALID_DATA;
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
-	pkgs = _badge_pkgs_new(&err, writable_pkg, NULL);
-	if (!pkgs) {
-		ERR("fail to _badge_pkgs_new : %d", err);
-		return err;
-	}
+	err = badge_ipc_request_insert(pkgname, writable_pkg, caller);
 
-	INFO("pkgs : %s", pkgs);
-
-	badge = _badge_new(pkgname, pkgs, &err);
-	if (!badge) {
-		ERR("fail to _badge_new : %d", err);
-		free(pkgs);
-		return err;
-	}
-	free(pkgs);
-
-	err = _badge_insert(badge);
-	if (err != BADGE_ERROR_NONE) {
-		ERR("fail to _badge_insert : %d", err);
-		_badge_free(badge);
-		return err;
-	}
-
-	_badge_free(badge);
-
-	return BADGE_ERROR_NONE;
+	return err;
 }
 
 EXPORT_API
@@ -78,11 +56,9 @@ badge_error_e badge_remove(const char *pkgname)
 	if (!caller) {
 		ERR("fail to get caller pkgname");
 		return BADGE_ERROR_PERMISSION_DENIED;
-
 	}
 
-	result = _badge_remove(caller, pkgname);
-	free(caller);
+	result = badge_ipc_request_delete(pkgname, caller);
 
 	return result;
 }
@@ -112,9 +88,7 @@ badge_error_e badge_set_count(const char *pkgname, unsigned int count)
 		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
-	result = _badget_set_count(caller, pkgname, count);
-
-	free(caller);
+	result = badge_ipc_request_set_count(pkgname, caller, count);
 
 	return result;
 }
@@ -128,9 +102,16 @@ badge_error_e badge_get_count(const char *pkgname, unsigned int *count)
 EXPORT_API
 badge_error_e badge_set_display(const char *pkgname, unsigned int is_display)
 {
+	char *caller = NULL;
 	badge_error_e result = BADGE_ERROR_NONE;
 
-	result = _badget_set_display(pkgname, is_display);
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
+	}
+
+	result = badge_ipc_request_set_display(pkgname, caller, is_display);
 
 	return result;
 }
@@ -153,3 +134,22 @@ badge_error_e badge_unregister_changed_cb(badge_change_cb callback)
 	return _badge_unregister_changed_cb(callback);
 }
 
+EXPORT_API
+int badge_is_service_ready(void)
+{
+	return badge_ipc_is_master_ready();
+}
+
+EXPORT_API
+badge_error_e badge_add_deffered_task(
+		void (*deffered_task_cb)(void *data), void *user_data)
+{
+	return badge_ipc_add_deffered_task(deffered_task_cb, user_data);
+}
+
+EXPORT_API
+badge_error_e badge_del_deffered_task(
+		void (*deffered_task_cb)(void *data))
+{
+	return badge_ipc_del_deffered_task(deffered_task_cb);
+}

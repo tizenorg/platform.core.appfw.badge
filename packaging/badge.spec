@@ -1,8 +1,8 @@
 %define DBDIR "/opt/dbspace"
 Name:       badge
 Summary:    badge library
-Version:    0.0.2
-Release:    2
+Version:    0.0.4
+Release:    1
 Group:      TBD
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
@@ -10,6 +10,8 @@ BuildRequires: pkgconfig(aul)
 BuildRequires: pkgconfig(dbus-1)
 BuildRequires: pkgconfig(dbus-glib-1)
 BuildRequires: pkgconfig(dlog)
+BuildRequires: pkgconfig(vconf)
+BuildRequires: pkgconfig(com-core)
 BuildRequires: cmake
 Requires(post): /sbin/ldconfig
 requires(postun): /sbin/ldconfig

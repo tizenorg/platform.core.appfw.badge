@@ -69,5 +69,8 @@ char *_badge_pkgs_new(badge_error_e *err, const char *pkg1, ...);
 char *_badge_pkgs_new_valist(badge_error_e *err,
 			const char *pkg1, va_list args);
 
+void badge_changed_cb_call(unsigned int action, const char *pkgname,
+			unsigned int count);
+
 #endif /* __BADGE_INTERNAL_DEF_H__ */
 

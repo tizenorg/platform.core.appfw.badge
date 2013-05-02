@@ -35,15 +35,13 @@
 #include "badge_log.h"
 #include "badge_error.h"
 #include "badge_internal.h"
+#include "badge_ipc.h"
 
 #define BADGE_PKGNAME_LEN 512
 #define BADGE_TABLE_NAME "badge_data"
 #define BADGE_OPTION_TABLE_NAME "badge_option"
 
 #define BADGE_CHANGED_NOTI	"badge_changed"
-#define BADGE_DBUS_BUS_NAME	"org.tizen.libbadge"
-#define BADGE_DBUS_PATH		"/org/tizen/libbadge"
-#define BADGE_DBUS_INTERFACE	"org.tizen.libbadge.signal"
 
 struct _badge_h {
 	char *pkgname;
@@ -56,7 +54,6 @@ struct _badge_cb_data {
 };
 
 static GList *g_badge_cb_list;
-static DBusConnection *g_badge_cb_handle;
 
 static inline long _get_max_len(void)
 {
@@ -112,65 +109,6 @@ char *_badge_get_pkgname_by_pid(void)
 		return NULL;
 	} else
 		return pkgname;
-}
-
-
-static void _badge_changed(unsigned int action, const char *pkgname,
-			unsigned int count)
-{
-	DBusConnection *connection = NULL;
-	DBusMessage *message = NULL;
-	DBusError err;
-	dbus_bool_t ret;
-
-	if (!pkgname) {
-		ERR("pkgname is NULL");
-		return;
-	}
-
-	dbus_error_init(&err);
-	connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
-	if (!connection) {
-		ERR("Fail to dbus_bus_get : %s", err.message);
-		dbus_error_free(&err);
-		return;
-	}
-
-	message = dbus_message_new_signal(BADGE_DBUS_PATH,
-				BADGE_DBUS_INTERFACE,
-				BADGE_CHANGED_NOTI);
-
-	if (!message) {
-		ERR("fail to create dbus message");
-		goto release_n_return;
-	}
-
-	dbus_message_append_args(message,
-				DBUS_TYPE_UINT32, &action,
-				DBUS_TYPE_STRING, &pkgname,
-				DBUS_TYPE_UINT32, &count,
-				DBUS_TYPE_INVALID);
-
-	ret = dbus_connection_send(connection, message, NULL);
-	if (!ret) {
-		ERR("fail to send dbus message : [%u][%s][%u]",
-				action, pkgname, count);
-		goto release_n_return;
-	}
-
-	dbus_connection_flush(connection);
-
-	DBG("success to emit signal [%u][%s][%u]",
-			action, pkgname, count);
-
-release_n_return:
-	dbus_error_free(&err);
-
-	if (message)
-		dbus_message_unref(message);
-
-	if (connection)
-		dbus_connection_unref(connection);
 }
 
 static badge_error_e _badge_check_data_inserted(const char *pkgname,
@@ -505,8 +443,6 @@ badge_error_e _badge_insert(badge_h *badge)
 		goto return_close_db;
 	}
 
-	_badge_changed(BADGE_ACTION_CREATE, badge->pkgname, 0);
-
 	/* inserting badge options */
 	ret = _badge_check_option_inserted(badge->pkgname, db);
 	if (ret != BADGE_ERROR_NOT_EXIST) {
@@ -536,7 +472,7 @@ badge_error_e _badge_insert(badge_h *badge)
 
 return_close_db:
 	if (err_msg)
-		free(err_msg);
+		sqlite3_free(err_msg);
 
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
@@ -597,8 +533,6 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 		goto return_close_db;
 	}
 
-	_badge_changed(BADGE_ACTION_REMOVE, pkgname, 0);
-
 	/* treating option table */
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
@@ -624,7 +558,7 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 
 return_close_db:
 	if (err_msg)
-		free(err_msg);
+		sqlite3_free(err_msg);
 
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
@@ -687,11 +621,9 @@ badge_error_e _badget_set_count(const char *caller, const char *pkgname,
 		goto return_close_db;
 	}
 
-	_badge_changed(BADGE_ACTION_UPDATE, pkgname, count);
-
 return_close_db:
 	if (err_msg)
-		free(err_msg);
+		sqlite3_free(err_msg);
 
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
@@ -833,11 +765,9 @@ badge_error_e _badget_set_display(const char *pkgname,
 		goto return_close_db;
 	}
 
-	_badge_changed(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
-
 return_close_db:
 	if (err_msg)
-		free(err_msg);
+		sqlite3_free(err_msg);
 
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
@@ -913,7 +843,7 @@ return_close_db:
 	return result;
 }
 
-static void _badge_changed_cb_call(unsigned int action, const char *pkgname,
+void badge_changed_cb_call(unsigned int action, const char *pkgname,
 			unsigned int count)
 {
 	GList *list = g_badge_cb_list;
@@ -930,131 +860,14 @@ static void _badge_changed_cb_call(unsigned int action, const char *pkgname,
 	}
 }
 
-static DBusHandlerResult _badge_signal_filter(DBusConnection *conn,
-		DBusMessage *msg, void *user_data)
-{
-	const char *interface;
-	DBusError error;
-	dbus_bool_t ret;
-	unsigned int action = 0;
-	const char *pkgname = NULL;
-	unsigned int count = 0;
-
-	dbus_error_init(&error);
-
-	interface = dbus_message_get_interface(msg);
-	DBG("path : %s", dbus_message_get_path(msg));
-	DBG("interface : %s", interface);
-
-	if (g_strcmp0(BADGE_DBUS_INTERFACE, interface))
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-
-	ret = dbus_message_is_signal(msg, interface, BADGE_CHANGED_NOTI);
-	if (!ret) {
-		DBG("this msg is not signal");
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
-
-	ret = dbus_message_get_args(msg, &error,
-				DBUS_TYPE_UINT32, &action,
-				DBUS_TYPE_STRING, &pkgname,
-				DBUS_TYPE_UINT32, &count,
-				DBUS_TYPE_INVALID);
-	if (!ret) {
-		ERR("fail to get args : %s", error.message);
-		dbus_error_free(&error);
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
-	}
-
-	_badge_changed_cb_call(action, pkgname, count);
-
-	return DBUS_HANDLER_RESULT_HANDLED;
-}
-
-static inline void __bus_rule_get(char *buf, int buf_len)
-{
-	if (!buf)
-		return;
-	if (buf_len <= 1)
-		return;
-
-	snprintf(buf, buf_len,
-		"path='%s',type='signal',interface='%s',member='%s'",
-		BADGE_DBUS_PATH,
-		BADGE_DBUS_INTERFACE,
-		BADGE_CHANGED_NOTI);
-}
-
 static void _badge_changed_monitor_init()
 {
-	DBusError err;
-	DBusConnection *conn = NULL;
-	char rule[1024] = {'\0', };
-
-	if (g_badge_cb_handle)
-		return;
-
-	dbus_error_init(&err);
-	conn = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
-	if (!conn) {
-		ERR("fail to get bus : %s", err.message);
-		dbus_error_free(&err);
-		return;
-	}
-	dbus_connection_setup_with_g_main(conn, NULL);
-
-	__bus_rule_get(rule, sizeof(rule));
-
-	dbus_bus_add_match(conn, rule, &err);
-	if (dbus_error_is_set(&err)) {
-		ERR("fail to dbus_bus_remove_match : %s",
-				err.message);
-		dbus_error_free(&err);
-		dbus_connection_close(conn);
-		return;
-	}
-
-	if (dbus_connection_add_filter(conn, _badge_signal_filter,
-					NULL, NULL) == FALSE) {
-		ERR("fail to dbus_connection_add_filter : %s",
-				err.message);
-		dbus_error_free(&err);
-		dbus_connection_close(conn);
-		return;
-	}
-
-	dbus_connection_set_exit_on_disconnect(conn, FALSE);
-
-	g_badge_cb_handle = conn;
-
-	return;
+	badge_ipc_monitor_init();
 }
 
 static void _badge_chanaged_monitor_fini()
 {
-	DBusConnection *conn = g_badge_cb_handle;
-	char rule[1024] = {'\0', };
-	DBusError err;
-
-	if (!conn)
-		return;
-
-	dbus_error_init(&err);
-
-	dbus_connection_remove_filter(conn, _badge_signal_filter, NULL);
-
-	__bus_rule_get(rule, sizeof(rule));
-
-	dbus_bus_remove_match(conn, rule, &err);
-	if (dbus_error_is_set(&err)) {
-		ERR("fail to dbus_bus_remove_match : %s",
-				err.message);
-		dbus_error_free(&err);
-	}
-
-	dbus_connection_close(conn);
-
-	g_badge_cb_handle = NULL;
+	badge_ipc_monitor_fini();
 }
 
 static gint _badge_data_compare(gconstpointer a, gconstpointer b)
@@ -1076,8 +889,7 @@ badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
 	struct _badge_cb_data *bd = NULL;
 	GList *found = NULL;
 
-	if (!g_badge_cb_handle)
-		_badge_changed_monitor_init();
+	_badge_changed_monitor_init();
 
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
 			_badge_data_compare);
