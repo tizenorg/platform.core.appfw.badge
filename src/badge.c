@@ -43,6 +43,7 @@ badge_error_e badge_create(const char *pkgname, const char *writable_pkg)
 
 	err = badge_ipc_request_insert(pkgname, writable_pkg, caller);
 
+	free(caller);
 	return err;
 }
 
@@ -60,6 +61,7 @@ badge_error_e badge_remove(const char *pkgname)
 
 	result = badge_ipc_request_delete(pkgname, caller);
 
+	free(caller);
 	return result;
 }
 
@@ -90,6 +92,7 @@ badge_error_e badge_set_count(const char *pkgname, unsigned int count)
 
 	result = badge_ipc_request_set_count(pkgname, caller, count);
 
+	free(caller);
 	return result;
 }
 
@@ -113,6 +116,7 @@ badge_error_e badge_set_display(const char *pkgname, unsigned int is_display)
 
 	result = badge_ipc_request_set_display(pkgname, caller, is_display);
 
+	free(caller);
 	return result;
 }
 
