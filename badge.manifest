@@ -1,5 +1,16 @@
 <manifest>
-	<request>
-		<domain name="_"/>
-	</request>
+        <define>
+            <domain name="badge"/>
+                <provide>
+                        <label name="badge::db"/>
+                </provide>
+        </define>
+        <assign>
+                <filesystem path="/usr/lib/libbadge.so.0.0.1" label="_"/>
+                <filesystem path="/usr/lib/libbadge.so.0" label="_"/>
+                <filesystem path="/usr/lib/libbadge.so" label="_"/>
+        </assign>
+        <request>
+            <domain name="badge"/>
+        </request>
 </manifest>
