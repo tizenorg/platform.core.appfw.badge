@@ -522,8 +522,10 @@ badge_error_e badge_ipc_request_insert(const char *pkgname, const char *writable
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
+			packet_unref(result);
 			return ret;
 		}
+		packet_unref(result);
 	} else {
 		badge_ipc_is_master_ready();
 		return BADGE_ERROR_SERVICE_NOT_READY;
@@ -551,8 +553,10 @@ badge_error_e badge_ipc_request_delete(const char *pkgname, const char *caller) 
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
+			packet_unref(result);
 			return ret;
 		}
+		packet_unref(result);
 	} else {
 		badge_ipc_is_master_ready();
 		return BADGE_ERROR_SERVICE_NOT_READY;
@@ -580,8 +584,10 @@ badge_error_e badge_ipc_request_set_count(const char *pkgname, const char *calle
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
+			packet_unref(result);
 			return ret;
 		}
+		packet_unref(result);
 	} else {
 		badge_ipc_is_master_ready();
 		return BADGE_ERROR_SERVICE_NOT_READY;
@@ -609,8 +615,10 @@ badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *cal
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
+			packet_unref(result);
 			return ret;
 		}
+		packet_unref(result);
 	} else {
 		badge_ipc_is_master_ready();
 		return BADGE_ERROR_SERVICE_NOT_READY;

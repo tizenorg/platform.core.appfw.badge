@@ -1,7 +1,7 @@
 %define DBDIR "/opt/dbspace"
 Name:       badge
 Summary:    badge library
-Version:    0.0.4
+Version:    0.0.5
 Release:    1
 Group:      TBD
 License:    Apache-2.0
