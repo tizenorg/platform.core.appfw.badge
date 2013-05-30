@@ -1,9 +1,8 @@
-%define DBDIR "/opt/dbspace"
 Name:       badge
 Summary:    badge library
 Version:    0.0.5
 Release:    1
-Group:      TBD
+Group:      Application Framework/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 BuildRequires: pkgconfig(aul)
@@ -13,8 +12,6 @@ BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(vconf)
 BuildRequires: pkgconfig(com-core)
 BuildRequires: cmake
-Requires(post): /sbin/ldconfig
-requires(postun): /sbin/ldconfig
 %description
 Badge library.
 
@@ -23,25 +20,20 @@ Badge library.
 
 %package devel
 Summary:    Badge library (devel)
-Group:      Development/Libraries
+Group:      Application Framework/Development
 Requires:   %{name} = %{version}-%{release}
 
 %description devel
 Badge library (devel).
 
 %build
-export LDFLAGS+="-Wl,--rpath=%{_libdir} -Wl,--as-needed"
-LDFLAGS="$LDFLAGS" %cmake . 
+%cmake . 
 make %{?jobs:-j%jobs}
 
 %install
 %make_install
 
-mkdir -p %{buildroot}/usr/share/license
-cp -f LICENSE.APLv2.0 %{buildroot}/usr/share/license/%{name}
-
-
-%post
+%post 
 /sbin/ldconfig
 
 if [ ! -d %{DBDIR} ]
@@ -79,10 +71,10 @@ fi
 %postun -p /sbin/ldconfig
 
 %files
+%license LICENSE.APLv2.0
 %manifest badge.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib%{name}.so*
-/usr/share/license/%{name}
 
 %files devel
 %defattr(-,root,root,-)
