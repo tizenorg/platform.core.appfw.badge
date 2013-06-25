@@ -1,3 +1,6 @@
+* Tue Jun 25 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130613.135716@3df4bc8
+- Cleanup packaging and install database in %install
+
 * Thu May 30 2013 Anas Nashif <anas.nashif@intel.com> submit/tizen/20130517.044805@581dd0c
 - Remove license/group placeholders
 

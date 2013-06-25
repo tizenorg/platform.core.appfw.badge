@@ -12,19 +12,30 @@ BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(vconf)
 BuildRequires: pkgconfig(com-core)
 BuildRequires: cmake
+BuildRequires: sqlite3
+Requires: libbadge
+
 %description
 Badge library.
 
-%prep
-%setup -q
+%package -n libbadge
+Summary:    Badge Library
+Requires:   %{name} = %{version}-%{release}
+
+%description -n libbadge
+Badge library.
+
 
 %package devel
 Summary:    Badge library (devel)
 Group:      Application Framework/Development
-Requires:   %{name} = %{version}-%{release}
+Requires:   libbadge = %{version}-%{release}
 
 %description devel
 Badge library (devel).
+
+%prep
+%setup -q
 
 %build
 %cmake . 
@@ -32,52 +43,26 @@ make %{?jobs:-j%jobs}
 
 %install
 %make_install
+mkdir -p %{buildroot}/opt/dbspace
+sqlite3 %{buildroot}/opt/dbspace/.%{name}.db < %{name}.sql
 
-%post 
-/sbin/ldconfig
+%post  -p /sbin/ldconfig -n libbadge
 
-if [ ! -d %{DBDIR} ]
-then
-	mkdir -p %{DBDIR}
-fi
+%postun -p /sbin/ldconfig -n libbadge
 
-if [ ! -f %{DBDIR}/.%{name}.db ]
-then
-	sqlite3 %{DBDIR}/.%{name}.db 'PRAGMA journal_mode = PERSIST;
-		create table if not exists badge_data (
-			pkgname TEXT NOT NULL,
-			writable_pkgs TEXT,
-			badge INTEGER default 0,
-			rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-			UNIQUE (pkgname)
-		);
-		create table if not exists badge_option (
-			pkgname TEXT NOT NULL,
-			display INTEGER default 1,
-			UNIQUE (pkgname)
-		);
-	'
-fi
-
-chown :5000 %{DBDIR}/.%{name}.db
-chown :5000 %{DBDIR}/.%{name}.db-journal
-chmod 660 %{DBDIR}/.%{name}.db
-chmod 660 %{DBDIR}/.%{name}.db-journal
-if [ -f /usr/lib/rpm-plugins/msm.so ]
-then
-    chsmack -a 'badge::db' %{DBDIR}/.%{name}.db*
-fi
-
-%postun -p /sbin/ldconfig
-
-%files
+%files -n libbadge
 %license LICENSE.APLv2.0
 %manifest badge.manifest
 %defattr(-,root,root,-)
-%{_libdir}/lib%{name}.so*
+%{_libdir}/libbadge.so.*
+
+%files 
+%verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db-journal
+%verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/%{name}/*.h
+%{_libdir}/libbadge.so
 %{_libdir}/pkgconfig/%{name}.pc
 
