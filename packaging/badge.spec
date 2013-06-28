@@ -5,6 +5,7 @@ Release:    1
 Group:      Application Framework/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
+Source1001: 	badge.manifest
 BuildRequires: pkgconfig(aul)
 BuildRequires: pkgconfig(dbus-1)
 BuildRequires: pkgconfig(dbus-glib-1)
@@ -36,6 +37,7 @@ Badge library (devel).
 
 %prep
 %setup -q
+cp %{SOURCE1001} .
 
 %build
 %cmake . 
@@ -51,16 +53,19 @@ sqlite3 %{buildroot}/opt/dbspace/.%{name}.db < %{name}.sql
 %postun -p /sbin/ldconfig -n libbadge
 
 %files -n libbadge
+%manifest %{name}.manifest
 %license LICENSE.APLv2.0
 %manifest badge.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libbadge.so.*
 
 %files 
+%manifest %{name}.manifest
 %verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db-journal
 %verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db
 
 %files devel
+%manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_includedir}/%{name}/*.h
 %{_libdir}/libbadge.so
