@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <unistd.h>
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -31,6 +32,9 @@
 #include <aul.h>
 #include <sqlite3.h>
 #include <db-util.h>
+
+/* For multi-user support */
+#include <tzplatform_config.h>
 
 #include "badge_log.h"
 #include "badge_error.h"
@@ -41,7 +45,11 @@
 #define BADGE_TABLE_NAME "badge_data"
 #define BADGE_OPTION_TABLE_NAME "badge_option"
 
-#define BADGE_CHANGED_NOTI	"badge_changed"
+#define BADGE_CHANGED_NOTI "badge_changed"
+
+#define BADGE_DB_PATH tzplatform_mkpath(TZ_USER_DB, "badge.db")
+
+#define SCRIPT_INIT_DB tzplatform_mkpath(TZ_SYS_SHARE, "badge/resources/init_db.sh")
 
 struct _badge_h {
 	char *pkgname;
@@ -54,6 +62,30 @@ struct _badge_cb_data {
 };
 
 static GList *g_badge_cb_list;
+
+static int db_util_open_wrapper(sqlite3 *db)
+{
+	static int init_db = 1;
+	struct stat sts;
+	int sqlret, ret;
+
+	/* Check if the DB exists */
+	if(init_db) {
+		/* If the DB doesn't exist, create it and initialize it */
+		ret = stat(BADGE_DB_PATH, &sts);
+		if (ret == -1 && errno == ENOENT) {
+			DBG("DB %s doesn't exist, it needs to be created and \
+			initialized, calling %s", BADGE_DB_PATH, SCRIPT_INIT_DB);
+			system(SCRIPT_INIT_DB);
+		}
+		init_db = 0;
+	}
+
+	/* Open DB */
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+
+	return sqlret;
+}
 
 static inline long _get_max_len(void)
 {
@@ -287,13 +319,14 @@ badge_error_e _badge_is_existing(const char *pkgname, bool *existing)
 	int sqlret;
 	badge_error_e ret = BADGE_ERROR_NONE;
 	badge_error_e result = BADGE_ERROR_NONE;
+	badge_error_e sqlret_open;
 
 	if (!pkgname || !existing) {
 		ERR("pkgname : %s, existing : %p", pkgname, existing);
 		return BADGE_ERROR_INVALID_DATA;
 	}
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -325,7 +358,7 @@ badge_error_e _badge_foreach_existed(badge_cb callback, void *data)
 	if (!callback)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -409,7 +442,7 @@ badge_error_e _badge_insert(badge_h *badge)
 	if (!badge || !badge->pkgname || !badge->writable_pkgs)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%s][%d]", BADGE_DB_PATH, sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -499,7 +532,7 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 	if (!pkgname)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -586,7 +619,7 @@ badge_error_e _badget_set_count(const char *caller, const char *pkgname,
 	if (!pkgname)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -650,7 +683,7 @@ badge_error_e _badget_get_count(const char *pkgname, unsigned int *count)
 	if (!count)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -715,7 +748,7 @@ badge_error_e _badget_set_display(const char *pkgname,
 	if (is_display != 0 && is_display != 1)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -794,7 +827,7 @@ badge_error_e _badget_get_display(const char *pkgname, unsigned int *is_display)
 	if (!is_display)
 		return BADGE_ERROR_INVALID_DATA;
 
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	sqlret = db_util_open_wrapper(&db);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;

@@ -1,31 +1,30 @@
 Name:       badge
-Summary:    badge library
+Summary:    Badge library
 Version:    0.0.5
 Release:    1
 Group:      Application Framework/Libraries
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source1001: 	badge.manifest
+Source1001: badge.manifest
+Source1002: init_db.sh
 BuildRequires: pkgconfig(aul)
 BuildRequires: pkgconfig(dbus-1)
 BuildRequires: pkgconfig(dbus-glib-1)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(vconf)
 BuildRequires: pkgconfig(com-core)
+BuildRequires: pkgconfig(sqlite3)
+BuildRequires: pkgconfig(libtzplatform-config)
 BuildRequires: cmake
-BuildRequires: sqlite3
-Requires: libbadge
 
 %description
 Badge library.
 
 %package -n libbadge
 Summary:    Badge Library
-Requires:   %{name} = %{version}-%{release}
 
 %description -n libbadge
 Badge library.
-
 
 %package devel
 Summary:    Badge library (devel)
@@ -45,8 +44,8 @@ make %{?jobs:-j%jobs}
 
 %install
 %make_install
-mkdir -p %{buildroot}/opt/dbspace
-sqlite3 %{buildroot}/opt/dbspace/.%{name}.db < %{name}.sql
+install -D -m 0640 %{name}.sql %{buildroot}%{TZ_SYS_SHARE}/%{name}/ressources/%{name}.sql
+install -D -m 0750 %{SOURCE1002} %{buildroot}%{TZ_SYS_SHARE}/%{name}/ressources/init_db.sh
 
 %post  -p /sbin/ldconfig -n libbadge
 
@@ -58,11 +57,9 @@ sqlite3 %{buildroot}/opt/dbspace/.%{name}.db < %{name}.sql
 %manifest badge.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libbadge.so.*
-
-%files 
-%manifest %{name}.manifest
-%verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db-journal
-%verify(not md5 size mtime) %config(noreplace) %attr(660,root,app) /opt/dbspace/.%{name}.db
+%{TZ_SYS_SHARE}/%{name}
+%attr(640,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/%{name}/ressources/%{name}.sql
+%attr(750,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/%{name}/ressources/init_db.sh
 
 %files devel
 %manifest %{name}.manifest
