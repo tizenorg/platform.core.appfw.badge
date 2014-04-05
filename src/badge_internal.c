@@ -40,6 +40,7 @@
 #include "badge_error.h"
 #include "badge_internal.h"
 #include "badge_ipc.h"
+#include "badge_db.h"
 
 #define BADGE_PKGNAME_LEN 512
 #define BADGE_TABLE_NAME "badge_data"
@@ -468,11 +469,11 @@ badge_error_e _badge_insert(badge_h *badge)
 		goto return_close_db;
 	}
 
-	sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-	if (sqlret != SQLITE_OK) {
-		ERR("fail to insert badge[%s], err[%d - %s]",
-					badge->pkgname, sqlret, err_msg);
-		result = BADGE_ERROR_FROM_DB;
+	ret = badge_db_exec(db, sqlbuf, NULL);
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("failed to insert badge[%s], err[%d]",
+					badge->pkgname, ret);
+		result = ret;
 		goto return_close_db;
 	}
 
@@ -495,18 +496,15 @@ badge_error_e _badge_insert(badge_h *badge)
 		goto return_close_db;
 	}
 
-	sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-	if (sqlret != SQLITE_OK) {
-		ERR("fail to insert badge option[%s], err[%d - %s]",
-					badge->pkgname, sqlret, err_msg);
-		result = BADGE_ERROR_FROM_DB;
+	ret = badge_db_exec(db, sqlbuf, NULL);
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("failed to insert badge option[%s], err[%d]",
+					badge->pkgname, sqlret);
+		result = ret;
 		goto return_close_db;
 	}
 
 return_close_db:
-	if (err_msg)
-		sqlite3_free(err_msg);
-
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
 
@@ -524,7 +522,6 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 	sqlite3 *db = NULL;
 	int sqlret;
 	char *sqlbuf = NULL;
-	char *err_msg = NULL;
 
 	if (!caller)
 		return BADGE_ERROR_INVALID_DATA;
@@ -558,11 +555,11 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 		goto return_close_db;
 	}
 
-	sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-	if (sqlret != SQLITE_OK) {
-		ERR("fail to remove badge[%s], err[%d - %s]",
-					pkgname, sqlret, err_msg);
-		result = BADGE_ERROR_FROM_DB;
+	ret = badge_db_exec(db, sqlbuf, NULL);
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("failed to remove badge[%s], err[%d]",
+				pkgname, ret);
+		result = ret;
 		goto return_close_db;
 	}
 
@@ -581,18 +578,15 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 		goto return_close_db;
 	}
 
-	sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-	if (sqlret != SQLITE_OK) {
-		ERR("fail to remove badge option[%s], err[%d - %s]",
-					pkgname, sqlret, err_msg);
-		result = BADGE_ERROR_FROM_DB;
+	ret = badge_db_exec(db, sqlbuf, NULL);
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("failed to remove badge option[%s], err[%d]",
+				pkgname, ret);
+		result = ret;
 		goto return_close_db;
 	}
 
 return_close_db:
-	if (err_msg)
-		sqlite3_free(err_msg);
-
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
 
@@ -646,18 +640,15 @@ badge_error_e _badget_set_count(const char *caller, const char *pkgname,
 		goto return_close_db;
 	}
 
-	sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-	if (sqlret != SQLITE_OK) {
-		ERR("fail to set badge[%s] count[%d], err[%d - %s]",
-				pkgname, count, sqlret, err_msg);
-		result = BADGE_ERROR_FROM_DB;
+	ret = badge_db_exec(db, sqlbuf, NULL);
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("failed to set badge[%s] count[%d], err[%d]",
+				pkgname, count, ret);
+		result = ret;
 		goto return_close_db;
 	}
 
 return_close_db:
-	if (err_msg)
-		sqlite3_free(err_msg);
-
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
 
@@ -765,11 +756,11 @@ badge_error_e _badget_set_display(const char *pkgname,
 			goto return_close_db;
 		}
 
-		sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-		if (sqlret != SQLITE_OK) {
-			ERR("fail to set badge[%s] option[%d], err[%d - %s]",
-					pkgname, is_display, sqlret, err_msg);
-			result = BADGE_ERROR_FROM_DB;
+		ret = badge_db_exec(db, sqlbuf, NULL);
+		if (ret != BADGE_ERROR_NONE) {
+			ERR("failed to set badge[%s] option[%d], err[%d]",
+					pkgname, is_display, ret);
+			result = ret;
 			goto return_close_db;
 		}
 	} else if (ret == BADGE_ERROR_NOT_EXIST) {
@@ -786,11 +777,11 @@ badge_error_e _badget_set_display(const char *pkgname,
 			goto return_close_db;
 		}
 
-		sqlret = sqlite3_exec(db, sqlbuf, NULL, NULL, &err_msg);
-		if (sqlret != SQLITE_OK) {
-			ERR("fail to set badge[%s] option[%d], err[%d - %s]",
-					pkgname, is_display, sqlret, err_msg);
-			result = BADGE_ERROR_FROM_DB;
+		ret = badge_db_exec(db, sqlbuf, NULL);
+		if (ret != BADGE_ERROR_NONE) {
+			ERR("failed to set badge[%s] option[%d], err[%d]",
+					pkgname, is_display, ret);
+			result = ret;
 			goto return_close_db;
 		}
 	} else {
@@ -799,9 +790,6 @@ badge_error_e _badget_set_display(const char *pkgname,
 	}
 
 return_close_db:
-	if (err_msg)
-		sqlite3_free(err_msg);
-
 	if (sqlbuf)
 		sqlite3_free(sqlbuf);
 
@@ -835,6 +823,9 @@ badge_error_e _badget_get_display(const char *pkgname, unsigned int *is_display)
 
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
+		if (ret == BADGE_ERROR_NOT_EXIST) {
+			*is_display = 1;
+		}
 		result = ret;
 		goto return_close_db;
 	}
@@ -922,6 +913,9 @@ badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
 	struct _badge_cb_data *bd = NULL;
 	GList *found = NULL;
 
+	if (!callback)
+		return BADGE_ERROR_INVALID_DATA;
+
 	_badge_changed_monitor_init();
 
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
@@ -948,6 +942,9 @@ badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
 badge_error_e _badge_unregister_changed_cb(badge_change_cb callback)
 {
 	GList *found = NULL;
+
+	if (!callback)
+		return BADGE_ERROR_INVALID_DATA;
 
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
 				_badge_data_compare);
