@@ -35,10 +35,6 @@ badge_error_e badge_create(const char *pkgname, const char *writable_pkg)
 	char *caller = NULL;
 	badge_error_e err = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -56,10 +52,6 @@ badge_error_e badge_remove(const char *pkgname)
 {
 	char *caller = NULL;
 	badge_error_e result = BADGE_ERROR_NONE;
-
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
@@ -92,10 +84,6 @@ badge_error_e badge_set_count(const char *pkgname, unsigned int count)
 	char *caller = NULL;
 	badge_error_e result = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -120,10 +108,6 @@ badge_error_e badge_set_display(const char *pkgname, unsigned int is_display)
 	char *caller = NULL;
 	badge_error_e result = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -145,20 +129,12 @@ badge_error_e badge_get_display(const char *pkgname, unsigned int *is_display)
 EXPORT_API
 badge_error_e badge_register_changed_cb(badge_change_cb callback, void *data)
 {
-	if (callback == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
-
 	return _badge_register_changed_cb(callback, data);
 }
 
 EXPORT_API
 badge_error_e badge_unregister_changed_cb(badge_change_cb callback)
 {
-	if (callback == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
-	}
-
 	return _badge_unregister_changed_cb(callback);
 }
 

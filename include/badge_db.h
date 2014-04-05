@@ -25,7 +25,6 @@
 #define __BADGE_DB_DEF_H__
 
 #include <stdbool.h>
-#include <sqlite3.h>
 #include <badge_error.h>
 
 #ifdef __cplusplus
@@ -36,7 +35,6 @@ badge_error_e badge_db_insert(const char *pkgname, const char *writable_pkg, con
 badge_error_e badge_db_delete(const char *pkgname, const char *caller_pkg);
 badge_error_e badge_db_set_count(const char *pkgname, const char *caller_pkg, int count);
 badge_error_e badge_db_set_display_option(const char *pkgname, const char *caller_pkg, int is_display);
-badge_error_e badge_db_exec(sqlite3 * db, const char *query, int *num_changes);
 
 #ifdef __cplusplus
 	}

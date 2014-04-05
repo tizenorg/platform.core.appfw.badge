@@ -247,17 +247,11 @@ static void _master_started_cb_service(keynode_t *node,
 	int ret = BADGE_ERROR_NONE;
 
 	if (badge_ipc_is_master_ready()) {
-		ERR("try to register a badge service");
-		ret = badge_ipc_monitor_deregister();
-		if (ret != BADGE_ERROR_NONE) {
-			ERR("failed to deregister a monitor");
-		}
 		ret = badge_ipc_monitor_register();
 		if (ret != BADGE_ERROR_NONE) {
 			ERR("failed to register a monitor");
 		}
 	} else {
-		ERR("try to unregister a badge service");
 		ret = badge_ipc_monitor_deregister();
 		if (ret != BADGE_ERROR_NONE) {
 			ERR("failed to deregister a monitor");
@@ -631,63 +625,4 @@ badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *cal
 	}
 
 	return BADGE_ERROR_NONE;
-}
-
-badge_error_e badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value)
-{
-	int status = 0;
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
-
-	packet = packet_create("set_noti_property", "sss", pkgname, property, value);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "ii", &status, &ret) != 2) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO;
-		}
-		packet_unref(result);
-	} else {
-		ERR("failed to receive answer(delete)");
-		return BADGE_ERROR_SERVICE_NOT_READY;
-	}
-
-	return status;
-}
-
-badge_error_e badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value)
-{
-	int status = 0;
-	char *ret = NULL;
-	struct packet *packet;
-	struct packet *result;
-
-	packet = packet_create("get_noti_property", "ss", pkgname, property);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "is", &status, &ret) != 2) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO;
-		}
-		if (status == BADGE_ERROR_NONE && ret != NULL) {
-			*value = strdup(ret);
-		}
-		packet_unref(result);
-	} else {
-		ERR("failed to receive answer(delete)");
-		return BADGE_ERROR_SERVICE_NOT_READY;
-	}
-
-	return status;
 }

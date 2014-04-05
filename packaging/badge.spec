@@ -26,25 +26,17 @@ Summary:    Badge Library
 %description -n libbadge
 Badge library.
 
-%prep
-%setup -q
-cp %{SOURCE1001} .
-
 %package devel
 Summary:    Badge library (devel)
 Group:      Application Framework/Development
 Requires:   libbadge = %{version}-%{release}
 
 %description devel
-Development files needed to build software that needs to system a system badge.
+Badge library (devel).
 
-%package service-devel
-Summary:    Badge library (service-devel)
-Group:      Development/Libraries
-Requires:   %{name} = %{version}-%{release}
-
-%description service-devel
-Development files needed to build badge service
+%prep
+%setup -q
+cp %{SOURCE1001} .
 
 %build
 %cmake . 
@@ -72,15 +64,7 @@ install -D -m 0750 %{SOURCE1002} %{buildroot}%{TZ_SYS_SHARE}/%{name}/ressources/
 %files devel
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
-%{_includedir}/badge/badge.h
-%{_includedir}/badge/badge_error.h
-%{_includedir}/badge/badge_setting.h
+%{_includedir}/%{name}/*.h
 %{_libdir}/libbadge.so
 %{_libdir}/pkgconfig/%{name}.pc
 
-%files service-devel
-%manifest %{name}.manifest
-%defattr(-,root,root,-)
-%{_includedir}/badge/service/badge_db.h
-%{_includedir}/badge/service/badge_setting_service.h
-%{_libdir}/pkgconfig/badge-service.pc
