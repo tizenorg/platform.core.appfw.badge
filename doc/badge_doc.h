@@ -20,27 +20,25 @@
  *
  */
 
-
-#ifndef __BADGE_DB_DEF_H__
-#define __BADGE_DB_DEF_H__
-
-#include <stdbool.h>
-#include <sqlite3.h>
-#include <badge_error.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-badge_error_e badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller);
-badge_error_e badge_db_delete(const char *pkgname, const char *caller_pkg);
-badge_error_e badge_db_set_count(const char *pkgname, const char *caller_pkg, int count);
-badge_error_e badge_db_set_display_option(const char *pkgname, const char *caller_pkg, int is_display);
-badge_error_e badge_db_exec(sqlite3 * db, const char *query, int *num_changes);
-
-#ifdef __cplusplus
-	}
-#endif
-
-#endif /* __BADGE_DB_DEF_H__ */
-
+/**
+ *
+ * @ingroup BADGE_LIBRARY
+ * @defgroup BADGE_MODULE badge APIs
+ * @brief Badge APIs
+ *
+ * @section BADGE_MODULE_HEADER Required Header
+ *   \#include <badge.h>
+ * @section BADGE_MODULE_OVERVIEW Overview
+ * It provides functions for creating and inserting and updating badge.
+ *
+ * @ingroup BADGE_LIBRARY
+ * @defgroup BADGE_TYPE badge type
+ * @brief Type for badge APIs
+ *
+ * @section BADGE_TYPE_MODULE_HEADER Required Header
+ *   \#include <badge.h>
+ *   \#include <badge_error.h>
+ * @section BADGE_TYPE_MODULE_OVERVIEW Overview
+ * Type defines and enumerations for Badge APIs
+ *
+ */

@@ -29,9 +29,8 @@ extern "C" {
 #endif
 
 /**
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE_TYPE badge type
- * @brief Badge type
+ * @file badge_error.h
+ * @brief This file contains the badge APIs
  */
 
 /**
@@ -54,6 +53,10 @@ typedef enum _badge_error_e {
 	BADGE_ERROR_IO = -8,	/**< Error from I/O */
 	BADGE_ERROR_SERVICE_NOT_READY = -9,	/**< Error service not ready */
 } badge_error_e;
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 	}

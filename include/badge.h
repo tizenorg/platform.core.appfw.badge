@@ -31,14 +31,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 /**
- * @defgroup BADGE_LIBRARY Badge Library
- * @brief This badge library to store badge information of applications.
- */
-
-/**
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE_TYPE badge type
- * @brief Badge type
+ * @file badge.h
+ * @brief This file contains the badge APIs
  */
 
 /**
@@ -47,7 +41,7 @@ extern "C" {
  */
 
 /**
- * @breief Enumeration for Badge action
+ * @brief Enumeration for Badge action
  */
 enum _badge_action {
 	BADGE_ACTION_CREATE = 0,
@@ -81,18 +75,14 @@ typedef void (*badge_cb)(const char *pkgname, unsigned int count, void *data);
 typedef void (*badge_change_cb)(unsigned int action, const char *pkgname,
 			unsigned int count, void *data);
 
-
 /**
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE badge core API
- * @brief badge core API
+ * @}
  */
 
 /**
- * @addtogroup BADGE
+ * @addtogroup BADGE_MODULE
  * @{
  */
-
 
 /**
  * @brief This function creates badge for designated package.
@@ -297,6 +287,10 @@ badge_error_e badge_register_changed_cb(badge_change_cb callback, void *data);
  * @see badge_register_changed_cb()
  */
 badge_error_e badge_unregister_changed_cb(badge_change_cb callback);
+
+/**
+ * @}
+ */
 
 int badge_is_service_ready(void);
 
