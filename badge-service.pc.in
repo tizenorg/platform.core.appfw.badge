@@ -3,7 +3,7 @@ exec_prefix=@EXEC_PREFIX@
 libdir=@LIBDIR@
 includedir=@INCLUDEDIR@/service
 
-Name: badge
+Name: badge-service
 Description: Badge supporting library
 Version: @VERSION@
 Requires:
