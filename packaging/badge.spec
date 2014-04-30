@@ -1,4 +1,4 @@
-Name:       libbadge
+Name:       badge
 Summary:    Badge library
 Version:    0.0.5
 Release:    0
@@ -46,34 +46,34 @@ make %{?jobs:-j%jobs}
 
 %install
 %make_install
-install -D -m 0640 badge.sql %{buildroot}%{TZ_SYS_SHARE}/badge/ressources/badge.sql
-install -D -m 0750 %{SOURCE1002} %{buildroot}%{TZ_SYS_SHARE}/badge/ressources/init_db.sh
+install -D -m 0640 %{name}.sql %{buildroot}%{TZ_SYS_SHARE}/%{name}/ressources/%{name}.sql
+install -D -m 0750 %{SOURCE1002} %{buildroot}%{TZ_SYS_SHARE}/%{name}/ressources/init_db.sh
 
-%post  -p /sbin/ldconfig -n libbadge
+%post  -p /sbin/ldconfig -n %{name}
 
-%postun -p /sbin/ldconfig -n libbadge
+%postun -p /sbin/ldconfig -n %{name}
 
-%files -n libbadge
+%files -n %{name}
 %manifest %{name}.manifest
 %license LICENSE.APLv2.0
 %defattr(-,root,root,-)
 %{_libdir}/libbadge.so.*
-%{TZ_SYS_SHARE}/badge
-%attr(640,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/badge/ressources/badge.sql
-%attr(750,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/badge/ressources/init_db.sh
+%{TZ_SYS_SHARE}/%{name}
+%attr(640,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/%{name}/ressources/%{name}.sql
+%attr(750,root,%{TZ_SYS_USER_GROUP}) %{TZ_SYS_SHARE}/%{name}/ressources/init_db.sh
 
 %files devel
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
-%{_includedir}/badge/badge.h
-%{_includedir}/badge/badge_error.h
-%{_includedir}/badge/badge_setting.h
+%{_includedir}/%{name}/badge.h
+%{_includedir}/%{name}/badge_error.h
+%{_includedir}/%{name}/badge_setting.h
 %{_libdir}/libbadge.so
-%{_libdir}/pkgconfig/badge.pc
+%{_libdir}/pkgconfig/%{name}.pc
 
 %files service-devel
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
-%{_includedir}/badge/service/badge_db.h
-%{_includedir}/badge/service/badge_setting_service.h
+%{_includedir}/%{name}/service/badge_db.h
+%{_includedir}/%{name}/service/badge_setting_service.h
 %{_libdir}/pkgconfig/badge-service.pc
