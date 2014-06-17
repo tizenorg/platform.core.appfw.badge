@@ -24,6 +24,7 @@
 #include <stdarg.h>
 #include <sqlite3.h>
 #include <db-util.h>
+#include <tzplatform_config.h>
 
 #include "badge.h"
 #include "badge_log.h"
@@ -34,7 +35,7 @@
 #include "badge_db.h"
 
 #define SETTING_DB_TABLE "notification_setting"
-#define SETTING_DB_FILE "/opt/usr/dbspace/.notification_parser.db"
+#define SETTING_DB_FILE tzplatform_mkpath(TZ_USER_DB,".notification_parser.db")
 
 struct prop_table {
 	const char *property;
