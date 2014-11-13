@@ -72,9 +72,9 @@ struct _task_list {
 
 static task_list *g_task_list;
 
-static badge_error_e badge_ipc_monitor_register(void);
-static badge_error_e badge_ipc_monitor_deregister(void);
-static void _do_deffered_task(void);
+static int badge_ipc_monitor_register(void);
+static int badge_ipc_monitor_deregister(void);
+static void _do_deferred_task(void);
 static void _master_started_cb_task(keynode_t *node, void *data);
 
 /*!
@@ -117,9 +117,9 @@ int badge_ipc_is_master_ready(void)
 	return is_master_started;
 }
 
-badge_error_e
-badge_ipc_add_deffered_task(
-		void (*deffered_task_cb)(void *data),
+int
+badge_ipc_add_deferred_task(
+		void (*badge_add_deferred_task)(void *data),
 		void *user_data)
 {
 	task_list *list = NULL;
@@ -129,7 +129,7 @@ badge_ipc_add_deffered_task(
 	    (task_list *) malloc(sizeof(task_list));
 
 	if (list_new == NULL) {
-		return BADGE_ERROR_NO_MEMORY;
+		return BADGE_ERROR_OUT_OF_MEMORY;
 	}
 
 	if (s_info.is_started_cb_set_task == 0) {
@@ -140,7 +140,7 @@ badge_ipc_add_deffered_task(
 	list_new->next = NULL;
 	list_new->prev = NULL;
 
-	list_new->task_cb = deffered_task_cb;
+	list_new->task_cb = badge_add_deferred_task;
 	list_new->data = user_data;
 
 	if (g_task_list == NULL) {
@@ -158,9 +158,9 @@ badge_ipc_add_deffered_task(
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e
-badge_ipc_del_deffered_task(
-		void (*deffered_task_cb)(void *data))
+int
+badge_ipc_del_deferred_task(
+		void (*badge_add_deferred_task)(void *data))
 {
 	task_list *list_del = NULL;
 	task_list *list_prev = NULL;
@@ -169,7 +169,7 @@ badge_ipc_del_deffered_task(
 	list_del = g_task_list;
 
 	if (list_del == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	while (list_del->prev != NULL) {
@@ -177,7 +177,7 @@ badge_ipc_del_deffered_task(
 	}
 
 	do {
-		if (list_del->task_cb == deffered_task_cb) {
+		if (list_del->task_cb == badge_add_deferred_task) {
 			list_prev = list_del->prev;
 			list_next = list_del->next;
 
@@ -209,10 +209,10 @@ badge_ipc_del_deffered_task(
 		list_del = list_del->next;
 	} while (list_del != NULL);
 
-	return BADGE_ERROR_INVALID_DATA;
+	return BADGE_ERROR_INVALID_PARAMETER;
 }
 
-static void _do_deffered_task(void) {
+static void _do_deferred_task(void) {
 	task_list *list_do = NULL;
 	task_list *list_temp = NULL;
 
@@ -269,7 +269,7 @@ static void _master_started_cb_task(keynode_t *node,
 		void *data) {
 
 	if (badge_ipc_is_master_ready()) {
-		_do_deffered_task();
+		_do_deferred_task();
 	}
 }
 
@@ -387,10 +387,10 @@ static int _handler_service_register(pid_t pid, int handle, const struct packet 
 
 	if (!packet) {
 		ERR("Packet is not valid\n");
-		ret = BADGE_ERROR_INVALID_DATA;
+		ret = BADGE_ERROR_INVALID_PARAMETER;
 	} else if (packet_get(packet, "i", &ret) != 1) {
 		ERR("Packet is not valid\n");
-		ret = BADGE_ERROR_INVALID_DATA;
+		ret = BADGE_ERROR_INVALID_PARAMETER;
 	} else {
 		if (ret == BADGE_ERROR_NONE) {
 			badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0);
@@ -402,7 +402,7 @@ static int _handler_service_register(pid_t pid, int handle, const struct packet 
 /*!
  * functions to initialize and register a monitor
  */
-static badge_error_e badge_ipc_monitor_register(void)
+static int badge_ipc_monitor_register(void)
 {
 	int ret;
 	struct packet *packet;
@@ -436,17 +436,18 @@ static badge_error_e badge_ipc_monitor_register(void)
 	}
 
 	ERR("register a service\n");
+	com_core_packet_use_thread(1);
 
 	s_info.server_fd = com_core_packet_client_init(s_info.socket_file, 0, service_table);
 	if (s_info.server_fd < 0) {
 		ERR("Failed to make a connection to the master\n");
-		return BADGE_ERROR_IO;
+		return BADGE_ERROR_IO_ERROR;
 	}
 
 	packet = packet_create("service_register", "");
 	if (!packet) {
 		ERR("Failed to build a packet\n");
-		return BADGE_ERROR_IO;
+		return BADGE_ERROR_IO_ERROR;
 	}
 
 	ret = com_core_packet_async_send(s_info.server_fd, packet, 1.0, _handler_service_register, NULL);
@@ -454,8 +455,8 @@ static badge_error_e badge_ipc_monitor_register(void)
 	packet_destroy(packet);
 	if (ret != 0) {
 		com_core_packet_client_fini(s_info.server_fd);
-		s_info.server_fd = BADGE_ERROR_INVALID_DATA;
-		ret = BADGE_ERROR_IO;
+		s_info.server_fd = BADGE_ERROR_INVALID_PARAMETER;
+		ret = BADGE_ERROR_IO_ERROR;
 	} else {
 		ret = BADGE_ERROR_NONE;
 	}
@@ -464,21 +465,21 @@ static badge_error_e badge_ipc_monitor_register(void)
 	return ret;
 }
 
-badge_error_e badge_ipc_monitor_deregister(void)
+int badge_ipc_monitor_deregister(void)
 {
 	if (s_info.initialized == 0) {
 		return BADGE_ERROR_NONE;
 	}
 
 	com_core_packet_client_fini(s_info.server_fd);
-	s_info.server_fd = BADGE_ERROR_INVALID_DATA;
+	s_info.server_fd = BADGE_ERROR_INVALID_PARAMETER;
 
 	s_info.initialized = 0;
 
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e badge_ipc_monitor_init(void)
+int badge_ipc_monitor_init(void)
 {
 	int ret = BADGE_ERROR_NONE;
 
@@ -494,7 +495,7 @@ badge_error_e badge_ipc_monitor_init(void)
 	return ret;
 }
 
-badge_error_e badge_ipc_monitor_fini(void)
+int badge_ipc_monitor_fini(void)
 {
 	int ret = BADGE_ERROR_NONE;
 
@@ -509,7 +510,7 @@ badge_error_e badge_ipc_monitor_fini(void)
 }
 
 
-badge_error_e badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller) {
+int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller) {
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -524,7 +525,7 @@ badge_error_e badge_ipc_request_insert(const char *pkgname, const char *writable
 		if (packet_get(result, "i", &ret) != 1) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
@@ -533,14 +534,18 @@ badge_error_e badge_ipc_request_insert(const char *pkgname, const char *writable
 		}
 		packet_unref(result);
 	} else {
-		badge_ipc_is_master_ready();
-		return BADGE_ERROR_SERVICE_NOT_READY;
+		if (badge_ipc_is_master_ready() == 1) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_SERVICE_NOT_READY;
+		}
 	}
 
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e badge_ipc_request_delete(const char *pkgname, const char *caller) {
+int badge_ipc_request_delete(const char *pkgname, const char *caller) {
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -555,7 +560,7 @@ badge_error_e badge_ipc_request_delete(const char *pkgname, const char *caller) 
 		if (packet_get(result, "i", &ret) != 1) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
@@ -564,14 +569,18 @@ badge_error_e badge_ipc_request_delete(const char *pkgname, const char *caller) 
 		}
 		packet_unref(result);
 	} else {
-		badge_ipc_is_master_ready();
-		return BADGE_ERROR_SERVICE_NOT_READY;
+		if (badge_ipc_is_master_ready() == 1) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_SERVICE_NOT_READY;
+		}
 	}
 
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e badge_ipc_request_set_count(const char *pkgname, const char *caller, int count) {
+int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count) {
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -586,7 +595,7 @@ badge_error_e badge_ipc_request_set_count(const char *pkgname, const char *calle
 		if (packet_get(result, "i", &ret) != 1) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
@@ -595,14 +604,18 @@ badge_error_e badge_ipc_request_set_count(const char *pkgname, const char *calle
 		}
 		packet_unref(result);
 	} else {
-		badge_ipc_is_master_ready();
-		return BADGE_ERROR_SERVICE_NOT_READY;
+		if (badge_ipc_is_master_ready() == 1) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_SERVICE_NOT_READY;
+		}
 	}
 
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option) {
+int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option) {
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -617,7 +630,7 @@ badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *cal
 		if (packet_get(result, "i", &ret) != 1) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 
 		if (ret != BADGE_ERROR_NONE) {
@@ -626,14 +639,18 @@ badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *cal
 		}
 		packet_unref(result);
 	} else {
-		badge_ipc_is_master_ready();
-		return BADGE_ERROR_SERVICE_NOT_READY;
+		if (badge_ipc_is_master_ready() == 1) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_SERVICE_NOT_READY;
+		}
 	}
 
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value)
+int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value)
 {
 	int status = 0;
 	int ret = 0;
@@ -650,7 +667,7 @@ badge_error_e badge_ipc_setting_property_set(const char *pkgname, const char *pr
 		if (packet_get(result, "ii", &status, &ret) != 2) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 		packet_unref(result);
 	} else {
@@ -661,7 +678,7 @@ badge_error_e badge_ipc_setting_property_set(const char *pkgname, const char *pr
 	return status;
 }
 
-badge_error_e badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value)
+int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value)
 {
 	int status = 0;
 	char *ret = NULL;
@@ -678,7 +695,7 @@ badge_error_e badge_ipc_setting_property_get(const char *pkgname, const char *pr
 		if (packet_get(result, "is", &status, &ret) != 2) {
 			ERR("Failed to get a result packet");
 			packet_unref(result);
-			return BADGE_ERROR_IO;
+			return BADGE_ERROR_IO_ERROR;
 		}
 		if (status == BADGE_ERROR_NONE && ret != NULL) {
 			*value = strdup(ret);

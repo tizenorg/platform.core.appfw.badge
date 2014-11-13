@@ -33,20 +33,20 @@ extern "C" {
 
 struct packet;
 
-badge_error_e badge_ipc_monitor_init(void);
-badge_error_e badge_ipc_monitor_fini(void);
+int badge_ipc_monitor_init(void);
+int badge_ipc_monitor_fini(void);
 
-badge_error_e badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller);
-badge_error_e badge_ipc_request_delete(const char *pkgname, const char *caller);
-badge_error_e badge_ipc_request_set_count(const char *pkgname, const char *caller, int count);
-badge_error_e badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option);
+int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller);
+int badge_ipc_request_delete(const char *pkgname, const char *caller);
+int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count);
+int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option);
 
 int badge_ipc_is_master_ready(void);
-badge_error_e badge_ipc_add_deffered_task(void (*deffered_task_cb)(void *data), void *user_data);
-badge_error_e badge_ipc_del_deffered_task(void (*deffered_task_cb)(void *data));
+int badge_ipc_add_deferred_task(void (*badge_add_deferred_task)(void *data), void *user_data);
+int badge_ipc_del_deferred_task(void (*badge_add_deferred_task)(void *data));
 
-badge_error_e badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value);
-badge_error_e badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value);
+int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value);
+int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value);
 
 #ifdef __cplusplus
 }

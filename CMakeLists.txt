@@ -16,8 +16,8 @@ SET(CMAKE_SKIP_BUILD_RPATH true)
 
 SET(INSTALL_HEADERS_DEVEL
 	badge.h
-	badge_setting.h
 	badge_error.h
+	badge_internal.h
 )
 
 SET(INSTALL_HEADERS_SERVICE_DEVEL
@@ -50,6 +50,8 @@ pkg_check_modules(pkgs REQUIRED
 	dbus-glib-1
 	vconf
 	com-core
+	capi-appfw-package-manager
+	db-util
 )
 
 FOREACH(flag ${pkgs_CFLAGS})

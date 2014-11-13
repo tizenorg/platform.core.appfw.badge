@@ -30,7 +30,6 @@
 #include "badge_error.h"
 #include "badge_internal.h"
 #include "badge_ipc.h"
-#include "badge_setting.h"
 #include "badge_db.h"
 
 #define SETTING_DB_TABLE "notification_setting"
@@ -85,7 +84,7 @@ static const char *_get_prop_default_value(const char *property)
 }
 #endif
 
-static badge_error_e _is_record_exist(const char *pkgname, sqlite3 *db)
+static int _is_record_exist(const char *pkgname, sqlite3 *db)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -94,10 +93,10 @@ static badge_error_e _is_record_exist(const char *pkgname, sqlite3 *db)
 	int sqlret;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!db)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
 			 "appid = %Q",
@@ -105,7 +104,7 @@ static badge_error_e _is_record_exist(const char *pkgname, sqlite3 *db)
 
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
-		return BADGE_ERROR_NO_MEMORY;
+		return BADGE_ERROR_OUT_OF_MEMORY;
 	}
 
 	sqlret = sqlite3_prepare_v2(db, sqlbuf, -1, &stmt, NULL);
@@ -137,27 +136,27 @@ free_and_return:
 	return result;
 }
 
-EXPORT_API badge_error_e badge_setting_db_set(const char *pkgname, const char *property, const char *value)
+EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, const char *value)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	int sqlret;
 	const char *column = NULL;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!property)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!value)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	column = _get_prop_column(property);
 	if (!column)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlret = db_util_open(SETTING_DB_FILE, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
@@ -176,7 +175,7 @@ EXPORT_API badge_error_e badge_setting_db_set(const char *pkgname, const char *p
 			SETTING_DB_TABLE, column, value, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -199,10 +198,10 @@ return_close_db:
 	return result;
 }
 
-EXPORT_API badge_error_e badge_setting_db_get(const char *pkgname, const char *property, char **value)
+EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, char **value)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	sqlite3_stmt *stmt = NULL;
@@ -210,17 +209,17 @@ EXPORT_API badge_error_e badge_setting_db_get(const char *pkgname, const char *p
 	const char *column = NULL;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!property)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!value)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	column = _get_prop_column(property);
 	if (!column)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlret = db_util_open(SETTING_DB_FILE, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
@@ -239,7 +238,7 @@ EXPORT_API badge_error_e badge_setting_db_get(const char *pkgname, const char *p
 			column, SETTING_DB_TABLE, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -262,7 +261,7 @@ EXPORT_API badge_error_e badge_setting_db_get(const char *pkgname, const char *p
 			*value = get_data;
 		} else {
 			ERR("fail to alloc query");
-			result = BADGE_ERROR_NO_MEMORY;
+			result = BADGE_ERROR_OUT_OF_MEMORY;
 			goto return_close_db;
 		}
 	}
@@ -281,18 +280,18 @@ return_close_db:
 	return result;
 }
 
-EXPORT_API badge_error_e badge_setting_property_set(const char *pkgname, const char *property, const char *value)
+EXPORT_API int badge_setting_property_set(const char *pkgname, const char *property, const char *value)
 {
 	int ret = 0;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!property)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!value)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_set(pkgname, property, value);
 	if (ret != BADGE_ERROR_NONE) {
@@ -302,18 +301,18 @@ EXPORT_API badge_error_e badge_setting_property_set(const char *pkgname, const c
 	return BADGE_ERROR_NONE;
 }
 
-EXPORT_API badge_error_e badge_setting_property_get(const char *pkgname, const char *property, char **value)
+EXPORT_API int badge_setting_property_get(const char *pkgname, const char *property, char **value)
 {
 	int ret = 0;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!property)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!value)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_get(pkgname, property, value);
 	if (ret != BADGE_ERROR_NONE) {

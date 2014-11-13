@@ -3,7 +3,6 @@ Name:       badge
 Summary:    badge library
 Version:    0.0.15
 Release:    1
-VCS:        magnolia/framework/appfw/badge#badge_0.0.2-2-34-g7d493a8a797f0022faafaa25561d2e85a2bde6bf
 Group:      TBD
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
@@ -13,6 +12,8 @@ BuildRequires: pkgconfig(dbus-glib-1)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(vconf)
 BuildRequires: pkgconfig(com-core)
+BuildRequires: pkgconfig(capi-appfw-package-manager)
+BuildRequires: pkgconfig(db-util)
 BuildRequires: cmake
 Requires(post): /sbin/ldconfig
 requires(postun): /sbin/ldconfig
@@ -107,7 +108,7 @@ fi
 %defattr(-,root,root,-)
 %{_includedir}/badge/badge.h
 %{_includedir}/badge/badge_error.h
-%{_includedir}/badge/badge_setting.h
+%{_includedir}/badge/badge_internal.h
 %{_libdir}/pkgconfig/%{name}.pc
 
 %files service-devel
