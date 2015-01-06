@@ -24,6 +24,8 @@
 #ifndef __BADGE_ERROR_DEF_H__
 #define __BADGE_ERROR_DEF_H__
 
+#include <tizen.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,24 +36,24 @@ extern "C" {
  */
 
 /**
- * @addtogroup BADGE_TYPE
+ * @addtogroup BADGE_MODULE
  * @{
  */
 
 /**
- * @breief Enumeration for Badge error
+ * @brief Enumeration for Badge Error
  */
 typedef enum _badge_error_e {
-	BADGE_ERROR_NONE = 0,			/**< Success */
-	BADGE_ERROR_INVALID_DATA = -1,		/**< Invalid parameter */
-	BADGE_ERROR_NO_MEMORY = -2,		/**< No memory */
-	BADGE_ERROR_FROM_DB = -3,		/**< Error from DB */
-	BADGE_ERROR_ALREADY_EXIST = -4,		/**< Already exist */
-	BADGE_ERROR_FROM_DBUS = -5,		/**< Error from DBus */
-	BADGE_ERROR_NOT_EXIST = -6,		/**< Not exist */
-	BADGE_ERROR_PERMISSION_DENIED = -7,	/**< Permission denied */
-	BADGE_ERROR_IO = -8,	/**< Error from I/O */
-	BADGE_ERROR_SERVICE_NOT_READY = -9,	/**< Error service not ready */
+	BADGE_ERROR_NONE = TIZEN_ERROR_NONE,			/**< Success */
+	BADGE_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER,		/**< Invalid parameter */
+	BADGE_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,		/**< Out of memory */
+	BADGE_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED,	/**< Permission denied */
+	BADGE_ERROR_IO_ERROR = TIZEN_ERROR_IO_ERROR,	/**< Error from I/O */
+	BADGE_ERROR_FROM_DB = TIZEN_ERROR_BADGE | 0x01,		/**< Error from DB */
+	BADGE_ERROR_ALREADY_EXIST = TIZEN_ERROR_BADGE | 0x02,		/**< Already exist */
+	BADGE_ERROR_FROM_DBUS = TIZEN_ERROR_BADGE | 0x03,		/**< Error from DBus */
+	BADGE_ERROR_NOT_EXIST = TIZEN_ERROR_BADGE | 0x04,		/**< Not exist */
+	BADGE_ERROR_SERVICE_NOT_READY = TIZEN_ERROR_BADGE | 0x05,	/**< Error service not ready */
 } badge_error_e;
 
 /**

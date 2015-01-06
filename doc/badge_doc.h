@@ -22,23 +22,13 @@
 
 /**
  *
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE_MODULE badge APIs
+ * @defgroup BADGE_MODULE Badge
+ * @ingroup CAPI_APPLICATION_FRAMEWORK
  * @brief Badge APIs
  *
  * @section BADGE_MODULE_HEADER Required Header
  *   \#include <badge.h>
  * @section BADGE_MODULE_OVERVIEW Overview
  * It provides functions for creating and inserting and updating badge.
- *
- * @ingroup BADGE_LIBRARY
- * @defgroup BADGE_TYPE badge type
- * @brief Type for badge APIs
- *
- * @section BADGE_TYPE_MODULE_HEADER Required Header
- *   \#include <badge.h>
- *   \#include <badge_error.h>
- * @section BADGE_TYPE_MODULE_OVERVIEW Overview
- * Type defines and enumerations for Badge APIs
  *
  */

@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <fcntl.h>
-#include <errno.h>
 #include <unistd.h>
 #include <glib.h>
 #include <dbus/dbus.h>
@@ -32,9 +31,7 @@
 #include <aul.h>
 #include <sqlite3.h>
 #include <db-util.h>
-
-/* For multi-user support */
-#include <tzplatform_config.h>
+#include <package_manager.h>
 
 #include "badge_log.h"
 #include "badge_error.h"
@@ -46,11 +43,7 @@
 #define BADGE_TABLE_NAME "badge_data"
 #define BADGE_OPTION_TABLE_NAME "badge_option"
 
-#define BADGE_CHANGED_NOTI "badge_changed"
-
-#define BADGE_DB_PATH tzplatform_mkpath(TZ_USER_DB, "badge.db")
-
-#define SCRIPT_INIT_DB tzplatform_mkpath(TZ_SYS_SHARE, "badge/resources/init_db.sh")
+#define BADGE_CHANGED_NOTI	"badge_changed"
 
 struct _badge_h {
 	char *pkgname;
@@ -63,30 +56,6 @@ struct _badge_cb_data {
 };
 
 static GList *g_badge_cb_list;
-
-static int db_util_open_wrapper(sqlite3 *db)
-{
-	static int init_db = 1;
-	struct stat sts;
-	int sqlret, ret;
-
-	/* Check if the DB exists */
-	if(init_db) {
-		/* If the DB doesn't exist, create it and initialize it */
-		ret = stat(BADGE_DB_PATH, &sts);
-		if (ret == -1 && errno == ENOENT) {
-			DBG("DB %s doesn't exist, it needs to be created and \
-			initialized, calling %s", BADGE_DB_PATH, SCRIPT_INIT_DB);
-			system(SCRIPT_INIT_DB);
-		}
-		init_db = 0;
-	}
-
-	/* Open DB */
-	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
-
-	return sqlret;
-}
 
 static inline long _get_max_len(void)
 {
@@ -144,7 +113,7 @@ char *_badge_get_pkgname_by_pid(void)
 		return pkgname;
 }
 
-static badge_error_e _badge_check_data_inserted(const char *pkgname,
+static int _badge_check_data_inserted(const char *pkgname,
 					sqlite3 *db)
 {
 	sqlite3_stmt *stmt = NULL;
@@ -154,10 +123,10 @@ static badge_error_e _badge_check_data_inserted(const char *pkgname,
 	int sqlret;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!db)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
 			 "pkgname = %Q",
@@ -165,7 +134,7 @@ static badge_error_e _badge_check_data_inserted(const char *pkgname,
 
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
-		return BADGE_ERROR_NO_MEMORY;
+		return BADGE_ERROR_OUT_OF_MEMORY;
 	}
 
 	sqlret = sqlite3_prepare_v2(db, sqlbuf, -1, &stmt, NULL);
@@ -199,7 +168,7 @@ free_and_return:
 	return result;
 }
 
-static badge_error_e _badge_check_option_inserted(const char *pkgname,
+static int _badge_check_option_inserted(const char *pkgname,
 					sqlite3 *db)
 {
 	sqlite3_stmt *stmt = NULL;
@@ -209,10 +178,10 @@ static badge_error_e _badge_check_option_inserted(const char *pkgname,
 	int sqlret;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!db)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
 			 "pkgname = %Q",
@@ -220,7 +189,7 @@ static badge_error_e _badge_check_option_inserted(const char *pkgname,
 
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
-		return BADGE_ERROR_NO_MEMORY;
+		return BADGE_ERROR_OUT_OF_MEMORY;
 	}
 
 	sqlret = sqlite3_prepare_v2(db, sqlbuf, -1, &stmt, NULL);
@@ -254,26 +223,51 @@ free_and_return:
 	return result;
 }
 
-static badge_error_e _badge_check_writable(const char *caller,
+static int _is_same_certinfo(const char *caller, const char *pkgname)
+{
+	int ret = PACKAGE_MANAGER_ERROR_NONE;
+	package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
+
+	if (!caller) {
+		return 0;
+	}
+	if (!pkgname) {
+		return 0;
+	}
+
+	ret = package_manager_compare_package_cert_info(pkgname, caller, &compare_result);
+	if (ret == PACKAGE_MANAGER_ERROR_NONE &&
+		compare_result == PACKAGE_MANAGER_COMPARE_MATCH) {
+		return 1;
+	}
+
+	return 0;
+}
+
+static int _badge_check_writable(const char *caller,
 			const char *pkgname, sqlite3 *db)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	char *sqlbuf = NULL;
 	int sqlret;
 
 	if (!db)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!caller)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (g_strcmp0(caller, pkgname) == 0)
 		return BADGE_ERROR_NONE;
+
+	if (_is_same_certinfo(caller, pkgname) == 1) {
+		return BADGE_ERROR_NONE;
+	}
 
 	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %s WHERE " \
 			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
@@ -281,7 +275,7 @@ static badge_error_e _badge_check_writable(const char *caller,
 			 pkgname, caller);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
-		return BADGE_ERROR_NO_MEMORY;
+		return BADGE_ERROR_OUT_OF_MEMORY;
 	}
 
 	sqlret = sqlite3_prepare_v2(db, sqlbuf, -1, &stmt, NULL);
@@ -314,20 +308,19 @@ free_and_return:
 }
 
 
-badge_error_e _badge_is_existing(const char *pkgname, bool *existing)
+int _badge_is_existing(const char *pkgname, bool *existing)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
-	badge_error_e sqlret_open;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
 	if (!pkgname || !existing) {
 		ERR("pkgname : %s, existing : %p", pkgname, existing);
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -348,18 +341,18 @@ badge_error_e _badge_is_existing(const char *pkgname, bool *existing)
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e _badge_foreach_existed(badge_cb callback, void *data)
+int _badge_foreach_existed(badge_cb callback, void *data)
 {
 	sqlite3 *db = NULL;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	char *sqlbuf = NULL;
 	sqlite3_stmt *stmt = NULL;
 	int sqlret;
 
 	if (!callback)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -369,7 +362,7 @@ badge_error_e _badge_foreach_existed(badge_cb callback, void *data)
 				BADGE_TABLE_NAME);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto free_and_return;
 	}
 
@@ -431,19 +424,19 @@ free_and_return:
 	return result;
 }
 
-badge_error_e _badge_insert(badge_h *badge)
+int _badge_insert(badge_h *badge)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	char *sqlbuf = NULL;
 	char *err_msg = NULL;
 
 	if (!badge || !badge->pkgname || !badge->writable_pkgs)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%s][%d]", BADGE_DB_PATH, sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -465,7 +458,7 @@ badge_error_e _badge_insert(badge_h *badge)
 			 badge->pkgname, badge->writable_pkgs);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -492,7 +485,7 @@ badge_error_e _badge_insert(badge_h *badge)
 			 badge->pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -515,21 +508,21 @@ return_close_db:
 	return result;
 }
 
-badge_error_e _badge_remove(const char *caller, const char *pkgname)
+int _badge_remove(const char *caller, const char *pkgname)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	int sqlret;
 	char *sqlbuf = NULL;
 
 	if (!caller)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -551,7 +544,7 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 			 BADGE_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -574,7 +567,7 @@ badge_error_e _badge_remove(const char *caller, const char *pkgname)
 			BADGE_OPTION_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -597,23 +590,23 @@ return_close_db:
 	return result;
 }
 
-badge_error_e _badget_set_count(const char *caller, const char *pkgname,
+int _badget_set_count(const char *caller, const char *pkgname,
 			unsigned int count)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	int sqlret;
 	char *err_msg = NULL;
 
 	if (!caller)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -636,7 +629,7 @@ badge_error_e _badget_set_count(const char *caller, const char *pkgname,
 			 BADGE_TABLE_NAME, count, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -659,25 +652,30 @@ return_close_db:
 	return result;
 }
 
-badge_error_e _badget_get_count(const char *pkgname, unsigned int *count)
+int _badget_get_count(const char *pkgname, unsigned int *count)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	sqlite3_stmt *stmt = NULL;
 	int sqlret;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!count)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		return BADGE_ERROR_FROM_DB;
+		if (sqlret == SQLITE_PERM) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_FROM_DB;
+		}
 	}
 
 	ret = _badge_check_data_inserted(pkgname, db);
@@ -691,7 +689,7 @@ badge_error_e _badget_get_count(const char *pkgname, unsigned int *count)
 			 BADGE_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -723,23 +721,23 @@ return_close_db:
 	return result;
 }
 
-badge_error_e _badget_set_display(const char *pkgname,
+int _badget_set_display(const char *pkgname,
 			unsigned int is_display)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	int sqlret;
 	char *err_msg = NULL;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (is_display != 0 && is_display != 1)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
 		return BADGE_ERROR_FROM_DB;
@@ -752,7 +750,7 @@ badge_error_e _badget_set_display(const char *pkgname,
 				BADGE_OPTION_TABLE_NAME, is_display, pkgname);
 		if (!sqlbuf) {
 			ERR("fail to alloc query");
-			result = BADGE_ERROR_NO_MEMORY;
+			result = BADGE_ERROR_OUT_OF_MEMORY;
 			goto return_close_db;
 		}
 
@@ -773,7 +771,7 @@ badge_error_e _badget_set_display(const char *pkgname,
 				pkgname, is_display);
 		if (!sqlbuf) {
 			ERR("fail to alloc query");
-			result = BADGE_ERROR_NO_MEMORY;
+			result = BADGE_ERROR_OUT_OF_MEMORY;
 			goto return_close_db;
 		}
 
@@ -800,25 +798,30 @@ return_close_db:
 	return result;
 }
 
-badge_error_e _badget_get_display(const char *pkgname, unsigned int *is_display)
+int _badget_get_display(const char *pkgname, unsigned int *is_display)
 {
-	badge_error_e ret = BADGE_ERROR_NONE;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int ret = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	sqlite3_stmt *stmt = NULL;
 	int sqlret;
 
 	if (!pkgname)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (!is_display)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlret = db_util_open_wrapper(&db);
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		return BADGE_ERROR_FROM_DB;
+		if (sqlret == SQLITE_PERM) {
+			return BADGE_ERROR_PERMISSION_DENIED;
+		}
+		else {
+			return BADGE_ERROR_FROM_DB;
+		}
 	}
 
 	ret = _badge_check_option_inserted(pkgname, db);
@@ -835,7 +838,7 @@ badge_error_e _badget_get_display(const char *pkgname, unsigned int *is_display)
 			BADGE_OPTION_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
-		result = BADGE_ERROR_NO_MEMORY;
+		result = BADGE_ERROR_OUT_OF_MEMORY;
 		goto return_close_db;
 	}
 
@@ -908,13 +911,13 @@ static gint _badge_data_compare(gconstpointer a, gconstpointer b)
 	return 1;
 }
 
-badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
+int _badge_register_changed_cb(badge_change_cb callback, void *data)
 {
 	struct _badge_cb_data *bd = NULL;
 	GList *found = NULL;
 
 	if (!callback)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	_badge_changed_monitor_init();
 
@@ -928,7 +931,7 @@ badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
 
 		bd = malloc(sizeof(struct _badge_cb_data));
 		if (!bd)
-			return BADGE_ERROR_NO_MEMORY;
+			return BADGE_ERROR_OUT_OF_MEMORY;
 
 
 		bd->callback = callback;
@@ -939,12 +942,12 @@ badge_error_e _badge_register_changed_cb(badge_change_cb callback, void *data)
 	return BADGE_ERROR_NONE;
 }
 
-badge_error_e _badge_unregister_changed_cb(badge_change_cb callback)
+int _badge_unregister_changed_cb(badge_change_cb callback)
 {
 	GList *found = NULL;
 
 	if (!callback)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
 				_badge_data_compare);
@@ -958,13 +961,17 @@ badge_error_e _badge_unregister_changed_cb(badge_change_cb callback)
 	if (!g_badge_cb_list)
 		_badge_chanaged_monitor_fini();
 
-	return BADGE_ERROR_NONE;
+	if (found != NULL) {
+		return BADGE_ERROR_NONE;
+	} else {
+		return BADGE_ERROR_INVALID_PARAMETER;
+	}
 }
 
-badge_error_e _badge_free(badge_h *badge)
+int _badge_free(badge_h *badge)
 {
 	if (!badge)
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 
 	if (badge->pkgname)
 		free(badge->pkgname);
@@ -978,21 +985,21 @@ badge_error_e _badge_free(badge_h *badge)
 }
 
 badge_h *_badge_new(const char *pkgname, const char *writable_pkgs,
-		badge_error_e *err)
+		int *err)
 {
 	badge_h *badge = NULL;
 
 	if (!pkgname) {
 		ERR("PKGNAME is NULL");
 		if (err)
-			*err = BADGE_ERROR_INVALID_DATA;
+			*err = BADGE_ERROR_INVALID_PARAMETER;
 		return NULL;
 	}
 
 	if (!writable_pkgs) {
 		ERR("writable_pkgs is NULL");
 		if (err)
-			*err = BADGE_ERROR_INVALID_DATA;
+			*err = BADGE_ERROR_INVALID_PARAMETER;
 		return NULL;
 	}
 
@@ -1001,7 +1008,7 @@ badge_h *_badge_new(const char *pkgname, const char *writable_pkgs,
 	if (!badge) {
 		ERR("fail to alloc handle");
 		if (err)
-			*err = BADGE_ERROR_NO_MEMORY;
+			*err = BADGE_ERROR_OUT_OF_MEMORY;
 		return NULL;
 	}
 
@@ -1013,7 +1020,7 @@ badge_h *_badge_new(const char *pkgname, const char *writable_pkgs,
 	return badge;
 }
 
-char *_badge_pkgs_new(badge_error_e *err, const char *pkg1, ...)
+char *_badge_pkgs_new(int *err, const char *pkg1, ...)
 {
 	char *caller_pkgname = NULL;
 	char *s = NULL;
@@ -1057,7 +1064,7 @@ char *_badge_pkgs_new(badge_error_e *err, const char *pkg1, ...)
 	if (!result) {
 		ERR("fail to alloc memory");
 		if (err)
-			*err = BADGE_ERROR_NO_MEMORY;
+			*err = BADGE_ERROR_OUT_OF_MEMORY;
 		free(caller_pkgname);
 		return NULL;
 	}
@@ -1078,7 +1085,7 @@ char *_badge_pkgs_new(badge_error_e *err, const char *pkg1, ...)
 		if (!new_pkgs) {
 			ERR("fail to alloc memory");
 			if (err)
-				*err = BADGE_ERROR_NO_MEMORY;
+				*err = BADGE_ERROR_OUT_OF_MEMORY;
 
 			free(result);
 			free(caller_pkgname);
@@ -1093,7 +1100,7 @@ char *_badge_pkgs_new(badge_error_e *err, const char *pkg1, ...)
 	return result;
 }
 
-char *_badge_pkgs_new_valist(badge_error_e *err, const char *pkg1, va_list args)
+char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 {
 	char *caller_pkgname = NULL;
 	char *s = NULL;
@@ -1137,7 +1144,7 @@ char *_badge_pkgs_new_valist(badge_error_e *err, const char *pkg1, va_list args)
 	if (!result) {
 		ERR("fail to alloc memory");
 		if (err)
-			*err = BADGE_ERROR_NO_MEMORY;
+			*err = BADGE_ERROR_OUT_OF_MEMORY;
 		free(caller_pkgname);
 		va_end(args2);
 		return NULL;
@@ -1158,7 +1165,7 @@ char *_badge_pkgs_new_valist(badge_error_e *err, const char *pkg1, va_list args)
 		if (!new_pkgs) {
 			ERR("fail to alloc memory");
 			if (err)
-				*err = BADGE_ERROR_NO_MEMORY;
+				*err = BADGE_ERROR_OUT_OF_MEMORY;
 
 			free(result);
 			free(caller_pkgname);
