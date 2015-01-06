@@ -30,8 +30,8 @@
 extern "C" {
 #endif
 
-badge_error_e badge_setting_db_set(const char *pkgname, const char *property, const char *value);
-badge_error_e badge_setting_db_get(const char *pkgname, const char *property, char **value);
+int badge_setting_db_set(const char *pkgname, const char *property, const char *value);
+int badge_setting_db_get(const char *pkgname, const char *property, char **value);
 
 #ifdef __cplusplus
 }

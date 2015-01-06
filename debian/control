@@ -1,0 +1,25 @@
+Source: badge
+Section: libs
+Priority: optional
+Maintainer: Jeonghoon Park <jh1979.park@samsung.com>, Young-joo Park <yjoo93.park@samsung.com>
+Build-Depends: debhelper (>= 5), dlog-dev, libaul-1-dev, libdbus-1-dev, libdbus-glib-1-dev
+Standards-Version: 3.7.2
+
+Package: libbadge
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Badge supporting library (shared object)
+
+Package: libbadge-dev
+Section: libs
+Architecture: any
+Depends: libbadge (= ${Source-Version})
+Description: Badge supporting library (development)
+
+Package: libbadge-dbg
+Section: debug
+Architecture: any
+Depends: ${misc:Depends}, libbadge (= ${Source-Version})
+Description: Badge supporting library (unstripped)
+

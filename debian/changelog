@@ -1,0 +1,15 @@
+badge (0.0.1-2) unstable; urgency=low
+
+  * remove group_id
+  * Git: slp/pkgs/b/badge
+  * Tag: badge_0.0.1-2
+
+ -- Jeonghoon Park <jh1979.park@samsung.com>  Thu, 31 May 2012 15:33:36 +0900
+
+badge (0.0.1-1) unstable; urgency=low
+
+  * Initial Release.
+  * Git: slp/pkgs/b/badge
+  * Tag: badge_0.0.1-1
+
+ -- Jeonghoon Park <jh1979.park@samsung.com>  Mon, 27 Feb 2012 14:14:00 +0900

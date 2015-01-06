@@ -30,15 +30,15 @@
 #include "badge_internal.h"
 
 EXPORT_API
-badge_error_e badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller)
+int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller)
 {
-	badge_error_e err = BADGE_ERROR_NONE;
+	int err = BADGE_ERROR_NONE;
 	badge_h *badge = NULL;
 	char *pkgs = NULL;
 
 	if (!pkgname) {
 		WARN("package name is NULL");
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	pkgs = _badge_pkgs_new(&err, writable_pkg, caller, NULL);
@@ -70,9 +70,9 @@ badge_error_e badge_db_insert(const char *pkgname, const char *writable_pkg, con
 }
 
 EXPORT_API
-badge_error_e badge_db_delete(const char *pkgname, const char *caller)
+int badge_db_delete(const char *pkgname, const char *caller)
 {
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
 	result = _badge_remove(caller, pkgname);
 
@@ -80,9 +80,9 @@ badge_error_e badge_db_delete(const char *pkgname, const char *caller)
 }
 
 EXPORT_API
-badge_error_e badge_db_set_count(const char *pkgname, const char *caller, int count)
+int badge_db_set_count(const char *pkgname, const char *caller, int count)
 {
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
 	result = _badget_set_count(caller, pkgname, count);
 
@@ -90,9 +90,9 @@ badge_error_e badge_db_set_count(const char *pkgname, const char *caller, int co
 }
 
 EXPORT_API
-badge_error_e badge_db_set_display_option(const char *pkgname, const char *caller, int is_display)
+int badge_db_set_display_option(const char *pkgname, const char *caller, int is_display)
 {
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
 	result = _badget_set_display(pkgname, is_display);
 
@@ -100,16 +100,16 @@ badge_error_e badge_db_set_display_option(const char *pkgname, const char *calle
 }
 
 EXPORT_API
-badge_error_e badge_db_exec(sqlite3 * db, const char *query, int *num_changes)
+int badge_db_exec(sqlite3 * db, const char *query, int *num_changes)
 {
 	int ret = 0;
 	sqlite3_stmt *stmt = NULL;
 
 	if (db == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 	if (query == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	ret = sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
