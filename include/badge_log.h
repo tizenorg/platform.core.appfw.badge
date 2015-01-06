@@ -34,22 +34,22 @@
 
 #define DBG(fmt , args...) \
 	do { \
-		LOGD("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
+		SECURE_LOGD("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
 	} while (0)
 
 #define INFO(fmt , args...) \
 	do { \
-		LOGI("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
+		SECURE_LOGI("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
 	} while (0)
 
 #define WARN(fmt , args...) \
 	do { \
-		LOGI("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
+		SECURE_LOGW("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
 	} while (0)
 
 #define ERR(fmt , args...) \
 	do { \
-		LOGI("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
+		SECURE_LOGE("[%s : %d] "fmt"\n", __func__, __LINE__, ##args); \
 	} while (0)
 
 #else /* BADGE_USE_DLOG */

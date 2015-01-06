@@ -1,0 +1,27 @@
+#!/bin/sh
+
+if [ ! -d @DATADIR@/dbspace ]
+then
+	mkdir -p @DATADIR@/dbspace
+fi
+
+if [ ! -f @DATADIR@/dbspace/.@PROJECT_NAME@.db ]
+then
+	sqlite3 @DATADIR@/dbspace/.@PROJECT_NAME@.db 'PRAGMA journal_mode = PERSIST;
+		create table if not exists badge_data (
+			pkgname TEXT NOT NULL,
+			writable_pkgs TEXT,
+			badge INTEGER default 0,
+			rowid INTEGER PRIMARY KEY AUTOINCREMENT,
+			UNIQUE (pkgname)
+		);	
+	'
+fi
+
+if [ ${USER} = "root" ]
+then
+	chown root:5000 @DATADIR@/dbspace/.@PROJECT_NAME@.db
+	chown root:5000 @DATADIR@/dbspace/.@PROJECT_NAME@.db-journal
+fi
+chmod 660 @DATADIR@/dbspace/.@PROJECT_NAME@.db
+chmod 660 @DATADIR@/dbspace/.@PROJECT_NAME@.db-journal
