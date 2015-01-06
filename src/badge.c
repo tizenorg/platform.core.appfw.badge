@@ -30,13 +30,13 @@
 #include "badge_ipc.h"
 
 EXPORT_API
-badge_error_e badge_create(const char *pkgname, const char *writable_pkg)
+int badge_create(const char *pkgname, const char *writable_pkg)
 {
 	char *caller = NULL;
-	badge_error_e err = BADGE_ERROR_NONE;
+	int err = BADGE_ERROR_NONE;
 
 	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	caller = _badge_get_pkgname_by_pid();
@@ -52,13 +52,31 @@ badge_error_e badge_create(const char *pkgname, const char *writable_pkg)
 }
 
 EXPORT_API
-badge_error_e badge_remove(const char *pkgname)
+int badge_new(const char *writable_app_id)
 {
 	char *caller = NULL;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int err = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
+	}
+
+	err = badge_ipc_request_insert(caller, writable_app_id, caller);
+
+	free(caller);
+	return err;
+}
+
+EXPORT_API
+int badge_remove(const char *app_id)
+{
+	char *caller = NULL;
+	int result = BADGE_ERROR_NONE;
+
+	if (app_id == NULL) {
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	caller = _badge_get_pkgname_by_pid();
@@ -67,33 +85,33 @@ badge_error_e badge_remove(const char *pkgname)
 		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
-	result = badge_ipc_request_delete(pkgname, caller);
+	result = badge_ipc_request_delete(app_id, caller);
 
 	free(caller);
 	return result;
 }
 
 EXPORT_API
-badge_error_e badge_is_existing(const char *pkgname, bool *existing)
+int badge_is_existing(const char *app_id, bool *existing)
 {
-	return _badge_is_existing(pkgname, existing);
+	return _badge_is_existing(app_id, existing);
 }
 
 
 EXPORT_API
-badge_error_e badge_foreach_existed(badge_cb callback, void *data)
+int badge_foreach_existed(badge_cb callback, void *data)
 {
 	return _badge_foreach_existed(callback, data);
 }
 
 EXPORT_API
-badge_error_e badge_set_count(const char *pkgname, unsigned int count)
+int badge_set_count(const char *app_id, unsigned int count)
 {
 	char *caller = NULL;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+	if (app_id == NULL) {
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	caller = _badge_get_pkgname_by_pid();
@@ -102,26 +120,26 @@ badge_error_e badge_set_count(const char *pkgname, unsigned int count)
 		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
-	result = badge_ipc_request_set_count(pkgname, caller, count);
+	result = badge_ipc_request_set_count(app_id, caller, count);
 
 	free(caller);
 	return result;
 }
 
 EXPORT_API
-badge_error_e badge_get_count(const char *pkgname, unsigned int *count)
+int badge_get_count(const char *app_id, unsigned int *count)
 {
-	return _badget_get_count(pkgname, count);
+	return _badget_get_count(app_id, count);
 }
 
 EXPORT_API
-badge_error_e badge_set_display(const char *pkgname, unsigned int is_display)
+int badge_set_display(const char *app_id, unsigned int is_display)
 {
 	char *caller = NULL;
-	badge_error_e result = BADGE_ERROR_NONE;
+	int result = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+	if (app_id == NULL) {
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	caller = _badge_get_pkgname_by_pid();
@@ -130,33 +148,33 @@ badge_error_e badge_set_display(const char *pkgname, unsigned int is_display)
 		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
-	result = badge_ipc_request_set_display(pkgname, caller, is_display);
+	result = badge_ipc_request_set_display(app_id, caller, is_display);
 
 	free(caller);
 	return result;
 }
 
 EXPORT_API
-badge_error_e badge_get_display(const char *pkgname, unsigned int *is_display)
+int badge_get_display(const char *app_id, unsigned int *is_display)
 {
-	return _badget_get_display(pkgname, is_display);
+	return _badget_get_display(app_id, is_display);
 }
 
 EXPORT_API
-badge_error_e badge_register_changed_cb(badge_change_cb callback, void *data)
+int badge_register_changed_cb(badge_change_cb callback, void *data)
 {
 	if (callback == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	return _badge_register_changed_cb(callback, data);
 }
 
 EXPORT_API
-badge_error_e badge_unregister_changed_cb(badge_change_cb callback)
+int badge_unregister_changed_cb(badge_change_cb callback)
 {
 	if (callback == NULL) {
-		return BADGE_ERROR_INVALID_DATA;
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
 	return _badge_unregister_changed_cb(callback);
@@ -169,15 +187,15 @@ int badge_is_service_ready(void)
 }
 
 EXPORT_API
-badge_error_e badge_add_deffered_task(
-		void (*deffered_task_cb)(void *data), void *user_data)
+int badge_add_deferred_task(
+		void (*badge_add_deferred_task)(void *data), void *user_data)
 {
-	return badge_ipc_add_deffered_task(deffered_task_cb, user_data);
+	return badge_ipc_add_deferred_task(badge_add_deferred_task, user_data);
 }
 
 EXPORT_API
-badge_error_e badge_del_deffered_task(
-		void (*deffered_task_cb)(void *data))
+int badge_del_deferred_task(
+		void (*badge_add_deferred_task)(void *data))
 {
-	return badge_ipc_del_deffered_task(deffered_task_cb);
+	return badge_ipc_del_deferred_task(badge_add_deferred_task);
 }
