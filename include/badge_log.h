@@ -1,7 +1,7 @@
 /*
  *  libbadge
  *
- * Copyright (c) 2000 - 2012 Samsung Electronics Co., Ltd. All rights reserved.
+ * Copyright (c) 2000 - 2015 Samsung Electronics Co., Ltd. All rights reserved.
  *
  * Contact: Youngjoo Park <yjoo93.park@samsung.com>,
  *      Seungtaek Chung <seungtaek.chung@samsung.com>, Youngsub Ko <ys4610.ko@samsung.com>
