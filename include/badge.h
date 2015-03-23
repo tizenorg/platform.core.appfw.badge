@@ -44,7 +44,7 @@ extern "C" {
 /**
  * @internal
  * @brief Enumeration for Badge Action.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  */
 enum badge_action {
 	BADGE_ACTION_CREATE = 0,	/**< @internal Badge created */
@@ -58,7 +58,7 @@ enum badge_action {
 /**
  * @internal
  * @brief Called to retrieve the badge existence.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @param[in] app_id The name of the application
  * @param[in] count The count of the badge
  * @param[in] data The user data passed from the foreach function
@@ -71,7 +71,7 @@ typedef void (*badge_cb)(const char *app_id, unsigned int count, void *data);
 /**
  * @internal
  * @brief Called when the badge information is changed.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @param[in] action The type of the change
  * @param[in] app_id The name of the application
  * @param[in] count The count of the badge
@@ -85,7 +85,7 @@ typedef void (*badge_change_cb)(unsigned int action, const char *app_id,
 /**
  * @internal
  * @brief Retrieves all existing badges.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -106,7 +106,7 @@ int badge_foreach_existed(badge_cb callback, void *data);
 /**
  * @internal
  * @brief Registers a callback function to receive badge change event.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -126,7 +126,7 @@ int badge_register_changed_cb(badge_change_cb callback, void *data);
 /**
  * @internal
  * @brief Unregisters a callback function to receive badge change event.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -143,7 +143,7 @@ int badge_unregister_changed_cb(badge_change_cb callback);
 /**
  * @internal
  * @brief This function checks whether badge service is ready
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @remarks The specific error code can be obtained using the get_last_result() method. Error codes are described in Exception section.
@@ -156,7 +156,7 @@ int badge_is_service_ready(void);
 /**
  * @internal
  * @brief This function adds deferred task. the registered task will be executed when badge service become ready
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_add_deferred_task The callback function
@@ -174,7 +174,7 @@ int badge_add_deferred_task(
 /**
  * @internal
  * @brief This function removes deferred task.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_add_deferred_task The callback function
@@ -190,7 +190,7 @@ int badge_del_deferred_task(
 
 /**
  * @brief Creates a badge for the application itself.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @details Creates new badge to display.
@@ -222,7 +222,7 @@ int badge_new(const char *writable_app_id);
 
 /**
  * @brief Removes the badge for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -252,7 +252,7 @@ int badge_remove(const char *app_id);
 
 /**
  * @brief Sets badge count for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -284,7 +284,7 @@ int badge_set_count(const char *app_id, unsigned int count);
 
 /**
  * @brief Gets badge count for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -319,7 +319,7 @@ int badge_get_count(const char *app_id, unsigned int *count);
 
 /**
  * @brief Sets the display option for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -351,7 +351,7 @@ int badge_set_display(const char *app_id, unsigned int is_display);
 
 /**
  * @brief Gets the display option for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -388,7 +388,7 @@ int badge_get_display(const char *app_id, unsigned int *is_display);
 /**
  * @internal
  * @brief Tests if the badge for the designated application exists or not.
- * @since_tizen 2.3
+ * @since_tizen @if WEARABLE 2.3.1 @elseif MOBILE 2.3 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
