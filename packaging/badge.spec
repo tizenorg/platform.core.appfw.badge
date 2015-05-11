@@ -3,7 +3,7 @@ Name:       badge
 Summary:    badge library
 Version:    0.0.16
 Release:    1
-Group:      TBD
+Group:      Applications/Core Applications
 License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 BuildRequires: pkgconfig(aul)
@@ -102,7 +102,7 @@ fi
 %manifest badge.manifest
 %defattr(-,root,root,-)
 %{_libdir}/libbadge.so*
-/usr/share/license/%{name}
+%{_datarootdir}/license/%{name}
 
 %files devel
 %defattr(-,root,root,-)
