@@ -51,7 +51,7 @@ export CXXFLAGS="$CXXFLAGS -DTIZEN_DEBUG_ENABLE"
 export FFLAGS="$FFLAGS -DTIZEN_DEBUG_ENABLE"
 %endif
 export LDFLAGS+="-Wl,--rpath=%{_prefix}/lib -Wl,--as-needed"
-LDFLAGS="$LDFLAGS" cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix}
+LDFLAGS="$LDFLAGS" %cmake .
 make %{?jobs:-j%jobs}
 
 %install
