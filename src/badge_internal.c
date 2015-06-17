@@ -341,7 +341,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	return BADGE_ERROR_NONE;
 }
 
-int _badge_foreach_existed(badge_cb callback, void *data)
+int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 {
 	sqlite3 *db = NULL;
 	int result = BADGE_ERROR_NONE;

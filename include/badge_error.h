@@ -54,6 +54,7 @@ typedef enum _badge_error_e {
 	BADGE_ERROR_FROM_DBUS = TIZEN_ERROR_BADGE | 0x03,		/**< Error from DBus */
 	BADGE_ERROR_NOT_EXIST = TIZEN_ERROR_BADGE | 0x04,		/**< Not exist */
 	BADGE_ERROR_SERVICE_NOT_READY = TIZEN_ERROR_BADGE | 0x05,	/**< Error service not ready */
+	BADGE_ERROR_INVALID_PACKAGE = TIZEN_ERROR_BADGE | 0x06,	/**< The caller application is not signed with the certificate of the badge owner*/
 } badge_error_e;
 
 /**

@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <package_manager.h>
 
 #include "badge.h"
 #include "badge_log.h"
@@ -70,14 +71,10 @@ int badge_new(const char *writable_app_id)
 }
 
 EXPORT_API
-int badge_remove(const char *app_id)
+int badge_add(const char *badge_app_id)
 {
 	char *caller = NULL;
-	int result = BADGE_ERROR_NONE;
-
-	if (app_id == NULL) {
-		return BADGE_ERROR_INVALID_PARAMETER;
-	}
+	int err = BADGE_ERROR_NONE;
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
@@ -85,9 +82,65 @@ int badge_remove(const char *app_id)
 		return BADGE_ERROR_PERMISSION_DENIED;
 	}
 
+	if (badge_app_id == NULL) {
+		badge_app_id = caller;
+	}
+	else {
+		int pkgmgr_ret  = PACKAGE_MANAGER_ERROR_NONE;
+		package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
+
+		pkgmgr_ret = package_manager_compare_app_cert_info(badge_app_id, caller, &compare_result);
+
+		if (pkgmgr_ret != PACKAGE_MANAGER_ERROR_NONE || compare_result != PACKAGE_MANAGER_COMPARE_MATCH) {
+			err = BADGE_ERROR_INVALID_PACKAGE;
+			goto out;
+		}
+	}
+
+	err = badge_ipc_request_insert(badge_app_id, caller, caller);
+
+out:
+	if (caller)
+		free(caller);
+	return err;
+}
+
+EXPORT_API
+int badge_remove(const char *app_id)
+{
+	char *caller = NULL;
+	int result = BADGE_ERROR_NONE;
+	bool existing = false;
+
+	if (app_id == NULL) {
+		return BADGE_ERROR_INVALID_PARAMETER;
+	}
+
+	result = _badge_is_existing(app_id, &existing);
+
+	if (result != BADGE_ERROR_NONE) {
+		ERR("_badge_is_existing failed [%x]", result);
+		goto out;
+	}
+
+	if (existing == false) {
+		ERR("app_id is not exist [%s]", app_id);
+		result = BADGE_ERROR_NOT_EXIST;
+		goto out;
+	}
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
+	}
+
 	result = badge_ipc_request_delete(app_id, caller);
 
-	free(caller);
+out :
+	if (caller)
+		free(caller);
 	return result;
 }
 
@@ -101,7 +154,13 @@ int badge_is_existing(const char *app_id, bool *existing)
 EXPORT_API
 int badge_foreach_existed(badge_cb callback, void *data)
 {
-	return _badge_foreach_existed(callback, data);
+	return _badge_foreach_existed((badge_foreach_cb)callback, data);
+}
+
+EXPORT_API
+int badge_foreach(badge_foreach_cb callback, void *user_data)
+{
+	return _badge_foreach_existed(callback, user_data);
 }
 
 EXPORT_API
@@ -109,20 +168,36 @@ int badge_set_count(const char *app_id, unsigned int count)
 {
 	char *caller = NULL;
 	int result = BADGE_ERROR_NONE;
+	bool existing = false;
 
 	if (app_id == NULL) {
 		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
+	result = _badge_is_existing(app_id, &existing);
+
+	if (result != BADGE_ERROR_NONE) {
+		ERR("_badge_is_existing failed [%x]", result);
+		goto out;
+	}
+
+	if (existing == false) {
+		ERR("app_id is not exist [%s]", app_id);
+		result = BADGE_ERROR_NOT_EXIST;
+		goto out;
+	}
+
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
-		return BADGE_ERROR_PERMISSION_DENIED;
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
 	}
 
 	result = badge_ipc_request_set_count(app_id, caller, count);
-
-	free(caller);
+out:
+	if (caller)
+		free(caller);
 	return result;
 }
 
@@ -137,20 +212,37 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 {
 	char *caller = NULL;
 	int result = BADGE_ERROR_NONE;
+	bool existing = false;
 
 	if (app_id == NULL) {
 		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
+	result = _badge_is_existing(app_id, &existing);
+
+	if (result != BADGE_ERROR_NONE) {
+		ERR("_badge_is_existing failed [%x]", result);
+		goto out;
+	}
+
+	if (existing == false) {
+		ERR("app_id is not exist [%s]", app_id);
+		result = BADGE_ERROR_NOT_EXIST;
+		goto out;
+	}
+
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
-		return BADGE_ERROR_PERMISSION_DENIED;
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
 	}
 
 	result = badge_ipc_request_set_display(app_id, caller, is_display);
 
-	free(caller);
+out :
+	if (caller)
+		free(caller);
 	return result;
 }
 
