@@ -1,4 +1,4 @@
-%define DBDIR "/opt/dbspace"
+%define DBDIR "/usr/dbspace"
 Name:       badge
 Summary:    badge library
 Version:    0.0.16

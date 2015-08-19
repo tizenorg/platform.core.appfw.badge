@@ -1,2 +1,0 @@
-@PREFIX@/include/@PROJECT_NAME@/*.h
-@PREFIX@/lib/pkgconfig/*.pc

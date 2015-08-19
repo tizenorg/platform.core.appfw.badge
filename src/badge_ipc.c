@@ -266,8 +266,8 @@ static void _master_started_cb_service(keynode_t *node,
 }
 
 static void _master_started_cb_task(keynode_t *node,
-		void *data) {
-
+		void *data)
+{
 	if (badge_ipc_is_master_ready()) {
 		_do_deferred_task();
 	}

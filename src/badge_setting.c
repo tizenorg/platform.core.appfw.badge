@@ -33,7 +33,7 @@
 #include "badge_db.h"
 
 #define SETTING_DB_TABLE "notification_setting"
-#define SETTING_DB_FILE "/opt/usr/dbspace/.notification_parser.db"
+#define SETTING_DB_FILE "/usr/dbspace/.notification_parser.db"
 
 struct prop_table {
 	const char *property;
