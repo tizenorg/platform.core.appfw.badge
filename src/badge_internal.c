@@ -32,12 +32,15 @@
 #include <sqlite3.h>
 #include <db-util.h>
 #include <package_manager.h>
+#include <tzplatform_config.h>
 
 #include "badge_log.h"
 #include "badge_error.h"
 #include "badge_internal.h"
 #include "badge_ipc.h"
 #include "badge_db.h"
+
+#define BADGE_DB_PATH tzplatform_mkpath(TZ_SYS_DB, ".badge.db")
 
 #define BADGE_PKGNAME_LEN 512
 #define BADGE_TABLE_NAME "badge_data"
@@ -128,7 +131,7 @@ static int _badge_check_data_inserted(const char *pkgname,
 	if (!db)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
+	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
 			 "pkgname = %Q",
 			 BADGE_TABLE_NAME, pkgname);
 
@@ -183,7 +186,7 @@ static int _badge_check_option_inserted(const char *pkgname,
 	if (!db)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
+	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
 			 "pkgname = %Q",
 			 BADGE_OPTION_TABLE_NAME, pkgname);
 
@@ -269,7 +272,7 @@ static int _badge_check_writable(const char *caller,
 		return BADGE_ERROR_NONE;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %s WHERE " \
+	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %q WHERE " \
 			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
 			 BADGE_TABLE_NAME,
 			 pkgname, caller);
@@ -323,6 +326,8 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
+		if (sqlret == SQLITE_PERM)
+			return BADGE_ERROR_PERMISSION_DENIED;
 		return BADGE_ERROR_FROM_DB;
 	}
 
@@ -358,7 +363,7 @@ int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %s",
+	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q",
 				BADGE_TABLE_NAME);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
@@ -431,7 +436,6 @@ int _badge_insert(badge_h *badge)
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
 	char *sqlbuf = NULL;
-	char *err_msg = NULL;
 
 	if (!badge || !badge->pkgname || !badge->writable_pkgs)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -449,7 +453,7 @@ int _badge_insert(badge_h *badge)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("INSERT INTO %s " \
+	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 			"(pkgname, " \
 			"writable_pkgs) " \
 			"VALUES "
@@ -477,7 +481,7 @@ int _badge_insert(badge_h *badge)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("INSERT INTO %s " \
+	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 			"(pkgname) " \
 			"VALUES "
 			"(%Q);",
@@ -540,7 +544,7 @@ int _badge_remove(const char *caller, const char *pkgname)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("DELETE FROM %s WHERE pkgname = %Q",
+	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q",
 			 BADGE_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
@@ -563,7 +567,7 @@ int _badge_remove(const char *caller, const char *pkgname)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("DELETE FROM %s WHERE pkgname = %Q",
+	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q",
 			BADGE_OPTION_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
@@ -598,7 +602,6 @@ int _badget_set_count(const char *caller, const char *pkgname,
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	int sqlret;
-	char *err_msg = NULL;
 
 	if (!caller)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -624,7 +627,7 @@ int _badget_set_count(const char *caller, const char *pkgname,
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("UPDATE %s SET badge = %d " \
+	sqlbuf = sqlite3_mprintf("UPDATE %q SET badge = %d " \
 			"WHERE pkgname = %Q",
 			 BADGE_TABLE_NAME, count, pkgname);
 	if (!sqlbuf) {
@@ -684,7 +687,7 @@ int _badget_get_count(const char *pkgname, unsigned int *count)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT badge FROM %s " \
+	sqlbuf = sqlite3_mprintf("SELECT badge FROM %q " \
 			"WHERE pkgname = %Q",
 			 BADGE_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
@@ -729,7 +732,6 @@ int _badget_set_display(const char *pkgname,
 	sqlite3 *db = NULL;
 	char *sqlbuf = NULL;
 	int sqlret;
-	char *err_msg = NULL;
 
 	if (!pkgname)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -745,7 +747,7 @@ int _badget_set_display(const char *pkgname,
 
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret == BADGE_ERROR_ALREADY_EXIST) {
-		sqlbuf = sqlite3_mprintf("UPDATE %s SET display = %d " \
+		sqlbuf = sqlite3_mprintf("UPDATE %q SET display = %d " \
 				"WHERE pkgname = %Q",
 				BADGE_OPTION_TABLE_NAME, is_display, pkgname);
 		if (!sqlbuf) {
@@ -762,7 +764,7 @@ int _badget_set_display(const char *pkgname,
 			goto return_close_db;
 		}
 	} else if (ret == BADGE_ERROR_NOT_EXIST) {
-		sqlbuf = sqlite3_mprintf("INSERT INTO %s " \
+		sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 				"(pkgname, " \
 				"display) " \
 				"VALUES "
@@ -833,7 +835,7 @@ int _badget_get_display(const char *pkgname, unsigned int *is_display)
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT display FROM %s " \
+	sqlbuf = sqlite3_mprintf("SELECT display FROM %q " \
 			"WHERE pkgname = %Q",
 			BADGE_OPTION_TABLE_NAME, pkgname);
 	if (!sqlbuf) {
