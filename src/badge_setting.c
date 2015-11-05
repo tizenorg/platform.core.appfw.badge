@@ -33,7 +33,7 @@
 #include "badge_db.h"
 
 #define SETTING_DB_TABLE "notification_setting"
-#define SETTING_DB_FILE "/usr/dbspace/.notification_parser.db"
+#define SETTING_DB_FILE "/opt/usr/dbspace/.notification_parser.db"
 
 struct prop_table {
 	const char *property;
@@ -98,7 +98,7 @@ static int _is_record_exist(const char *pkgname, sqlite3 *db)
 	if (!db)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %s WHERE " \
+	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
 			 "appid = %Q",
 			 SETTING_DB_TABLE, pkgname);
 
@@ -170,7 +170,7 @@ EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, c
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("UPDATE %s SET %s = %Q " \
+	sqlbuf = sqlite3_mprintf("UPDATE %q SET %q = %Q " \
 			"WHERE appid = %Q",
 			SETTING_DB_TABLE, column, value, pkgname);
 	if (!sqlbuf) {
@@ -233,7 +233,7 @@ EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, c
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT %s FROM %s " \
+	sqlbuf = sqlite3_mprintf("SELECT %q FROM %q " \
 			"WHERE appid = %Q",
 			column, SETTING_DB_TABLE, pkgname);
 	if (!sqlbuf) {

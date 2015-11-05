@@ -1,6 +1,6 @@
 %define DBDIR "/usr/dbspace"
 Name:       badge
-Summary:    badge library
+Summary:    Badge library
 Version:    0.0.16
 Release:    1
 Group:      Applications/Core Applications
