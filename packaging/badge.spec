@@ -1,6 +1,5 @@
-%define DBDIR "/usr/dbspace"
 Name:       badge
-Summary:    badge library
+Summary:    Badge library
 Version:    0.0.16
 Release:    1
 Group:      Applications/Core Applications
@@ -14,6 +13,7 @@ BuildRequires: pkgconfig(vconf)
 BuildRequires: pkgconfig(com-core)
 BuildRequires: pkgconfig(capi-appfw-package-manager)
 BuildRequires: pkgconfig(db-util)
+BuildRequires: pkgconfig(libtzplatform-config)
 BuildRequires: cmake
 Requires(post): /sbin/ldconfig
 requires(postun): /sbin/ldconfig
@@ -64,14 +64,14 @@ cp -f LICENSE %{buildroot}/usr/share/license/%{name}
 %post
 /sbin/ldconfig
 
-if [ ! -d %{DBDIR} ]
+if [ ! -d %{TZ_SYS_DB} ]
 then
-	mkdir -p %{DBDIR}
+	mkdir -p %{TZ_SYS_DB}
 fi
 
-if [ ! -f %{DBDIR}/.%{name}.db ]
+if [ ! -f %{TZ_SYS_DB}/.%{name}.db ]
 then
-	sqlite3 %{DBDIR}/.%{name}.db 'PRAGMA journal_mode = PERSIST;
+	sqlite3 %{TZ_SYS_DB}/.%{name}.db 'PRAGMA journal_mode = PERSIST;
 		create table if not exists badge_data (
 			pkgname TEXT NOT NULL,
 			writable_pkgs TEXT,
@@ -87,10 +87,10 @@ then
 	'
 fi
 
-chown :5000 %{DBDIR}/.%{name}.db
-chown :5000 %{DBDIR}/.%{name}.db-journal
-chmod 644 %{DBDIR}/.%{name}.db
-chmod 644 %{DBDIR}/.%{name}.db-journal
+chown :5000 %{TZ_SYS_DB}/.%{name}.db
+chown :5000 %{TZ_SYS_DB}/.%{name}.db-journal
+chmod 644 %{TZ_SYS_DB}/.%{name}.db
+chmod 644 %{TZ_SYS_DB}/.%{name}.db-journal
 
 %postun -p /sbin/ldconfig
 
