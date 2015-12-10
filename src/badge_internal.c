@@ -675,8 +675,7 @@ int _badget_get_count(const char *pkgname, unsigned int *count)
 		ERR("fail to db_util_open - [%d]", sqlret);
 		if (sqlret == SQLITE_PERM) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_FROM_DB;
 		}
 	}
@@ -820,8 +819,7 @@ int _badget_get_display(const char *pkgname, unsigned int *is_display)
 		ERR("fail to db_util_open - [%d]", sqlret);
 		if (sqlret == SQLITE_PERM) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_FROM_DB;
 		}
 	}

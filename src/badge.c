@@ -84,8 +84,7 @@ int badge_add(const char *badge_app_id)
 
 	if (badge_app_id == NULL) {
 		badge_app_id = caller;
-	}
-	else {
+	} else {
 		int pkgmgr_ret  = PACKAGE_MANAGER_ERROR_NONE;
 		package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
 
@@ -138,7 +137,7 @@ int badge_remove(const char *app_id)
 
 	result = badge_ipc_request_delete(app_id, caller);
 
-out :
+out:
 	if (caller)
 		free(caller);
 	return result;
@@ -240,7 +239,7 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 
 	result = badge_ipc_request_set_display(app_id, caller, is_display);
 
-out :
+out:
 	if (caller)
 		free(caller);
 	return result;

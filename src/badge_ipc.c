@@ -80,7 +80,8 @@ static void _master_started_cb_task(keynode_t *node, void *data);
 /*!
  * functions to check state of master
  */
-static inline void _set_master_started_cb(vconf_callback_fn cb) {
+static inline void _set_master_started_cb(vconf_callback_fn cb)
+{
 	int ret = -1;
 
 	ret = vconf_notify_key_changed(VCONFKEY_MASTER_STARTED,
@@ -91,7 +92,8 @@ static inline void _set_master_started_cb(vconf_callback_fn cb) {
 	}
 }
 
-static inline void _unset_master_started_cb(vconf_callback_fn cb) {
+static inline void _unset_master_started_cb(vconf_callback_fn cb)
+{
 	int ret = -1;
 
 	ret = vconf_ignore_key_changed(VCONFKEY_MASTER_STARTED,
@@ -117,8 +119,7 @@ int badge_ipc_is_master_ready(void)
 	return is_master_started;
 }
 
-int
-badge_ipc_add_deferred_task(
+int badge_ipc_add_deferred_task(
 		void (*badge_add_deferred_task)(void *data),
 		void *user_data)
 {
@@ -212,7 +213,8 @@ badge_ipc_del_deferred_task(
 	return BADGE_ERROR_INVALID_PARAMETER;
 }
 
-static void _do_deferred_task(void) {
+static void _do_deferred_task(void)
+{
 	task_list *list_do = NULL;
 	task_list *list_temp = NULL;
 
@@ -243,7 +245,8 @@ static void _do_deferred_task(void) {
 }
 
 static void _master_started_cb_service(keynode_t *node,
-		void *data) {
+		void *data)
+{
 	int ret = BADGE_ERROR_NONE;
 
 	if (badge_ipc_is_master_ready()) {
@@ -510,7 +513,8 @@ int badge_ipc_monitor_fini(void)
 }
 
 
-int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller) {
+int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller)
+{
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -536,8 +540,7 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 	} else {
 		if (badge_ipc_is_master_ready() == 1) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_SERVICE_NOT_READY;
 		}
 	}
@@ -545,7 +548,8 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 	return BADGE_ERROR_NONE;
 }
 
-int badge_ipc_request_delete(const char *pkgname, const char *caller) {
+int badge_ipc_request_delete(const char *pkgname, const char *caller)
+{
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -571,8 +575,7 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller) {
 	} else {
 		if (badge_ipc_is_master_ready() == 1) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_SERVICE_NOT_READY;
 		}
 	}
@@ -580,7 +583,8 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller) {
 	return BADGE_ERROR_NONE;
 }
 
-int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count) {
+int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count)
+{
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -606,8 +610,7 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 	} else {
 		if (badge_ipc_is_master_ready() == 1) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_SERVICE_NOT_READY;
 		}
 	}
@@ -615,7 +618,8 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 	return BADGE_ERROR_NONE;
 }
 
-int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option) {
+int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option)
+{
 	int ret = 0;
 	struct packet *packet;
 	struct packet *result;
@@ -641,8 +645,7 @@ int badge_ipc_request_set_display(const char *pkgname, const char *caller, int d
 	} else {
 		if (badge_ipc_is_master_ready() == 1) {
 			return BADGE_ERROR_PERMISSION_DENIED;
-		}
-		else {
+		} else {
 			return BADGE_ERROR_SERVICE_NOT_READY;
 		}
 	}
