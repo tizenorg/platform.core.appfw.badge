@@ -105,12 +105,11 @@ int badge_db_exec(sqlite3 * db, const char *query, int *num_changes)
 	int ret = 0;
 	sqlite3_stmt *stmt = NULL;
 
-	if (db == NULL) {
+	if (db == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
-	if (query == NULL) {
+
+	if (query == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	ret = sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);
 	if (ret != SQLITE_OK) {
@@ -122,9 +121,9 @@ int badge_db_exec(sqlite3 * db, const char *query, int *num_changes)
 	if (stmt != NULL) {
 		ret = sqlite3_step(stmt);
 		if (ret == SQLITE_OK || ret == SQLITE_DONE) {
-			if (num_changes != NULL) {
+			if (num_changes != NULL)
 				*num_changes = sqlite3_changes(db);
-			}
+
 			sqlite3_finalize(stmt);
 		} else {
 			ERR("DB err(%d) : %s", ret,
