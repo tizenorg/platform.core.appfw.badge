@@ -231,18 +231,16 @@ static int _is_same_certinfo(const char *caller, const char *pkgname)
 	int ret = PACKAGE_MANAGER_ERROR_NONE;
 	package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
 
-	if (!caller) {
+	if (!caller)
 		return 0;
-	}
-	if (!pkgname) {
+
+	if (!pkgname)
 		return 0;
-	}
 
 	ret = package_manager_compare_package_cert_info(pkgname, caller, &compare_result);
 	if (ret == PACKAGE_MANAGER_ERROR_NONE &&
-		compare_result == PACKAGE_MANAGER_COMPARE_MATCH) {
+		compare_result == PACKAGE_MANAGER_COMPARE_MATCH)
 		return 1;
-	}
 
 	return 0;
 }
@@ -268,9 +266,8 @@ static int _badge_check_writable(const char *caller,
 	if (g_strcmp0(caller, pkgname) == 0)
 		return BADGE_ERROR_NONE;
 
-	if (_is_same_certinfo(caller, pkgname) == 1) {
+	if (_is_same_certinfo(caller, pkgname) == 1)
 		return BADGE_ERROR_NONE;
-	}
 
 	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %q WHERE " \
 			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
@@ -353,6 +350,8 @@ int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 	char *sqlbuf = NULL;
 	sqlite3_stmt *stmt = NULL;
 	int sqlret;
+	const char *pkg = NULL;
+	unsigned int badge_count = 0;
 
 	if (!callback)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -402,12 +401,8 @@ int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		const char *pkg = NULL;
-		unsigned int badge_count = 0;
-
 		pkg = (const char *)sqlite3_column_text(stmt, 0);
 		badge_count = (unsigned int)sqlite3_column_int(stmt, 1);
-
 
 		if (pkg)
 			callback(pkg, badge_count, data);
@@ -673,11 +668,10 @@ int _badget_get_count(const char *pkgname, unsigned int *count)
 	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		if (sqlret == SQLITE_PERM) {
+		if (sqlret == SQLITE_PERM)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_FROM_DB;
-		}
 	}
 
 	ret = _badge_check_data_inserted(pkgname, db);
@@ -817,18 +811,17 @@ int _badget_get_display(const char *pkgname, unsigned int *is_display)
 	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		if (sqlret == SQLITE_PERM) {
+		if (sqlret == SQLITE_PERM)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_FROM_DB;
-		}
 	}
 
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
-		if (ret == BADGE_ERROR_NOT_EXIST) {
+		if (ret == BADGE_ERROR_NOT_EXIST)
 			*is_display = 1;
-		}
+
 		result = ret;
 		goto return_close_db;
 	}
@@ -874,9 +867,10 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
 			unsigned int count)
 {
 	GList *list = g_badge_cb_list;
+	struct _badge_cb_data *bd = NULL;
 
 	while (list) {
-		struct _badge_cb_data *bd = g_list_nth_data(list, 0);
+		bd = g_list_nth_data(list, 0);
 		if (!bd)
 			continue;
 
@@ -945,6 +939,7 @@ int _badge_register_changed_cb(badge_change_cb callback, void *data)
 int _badge_unregister_changed_cb(badge_change_cb callback)
 {
 	GList *found = NULL;
+	struct _badge_cb_data *bd = NULL;
 
 	if (!callback)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -953,7 +948,7 @@ int _badge_unregister_changed_cb(badge_change_cb callback)
 				_badge_data_compare);
 
 	if (found) {
-		struct _badge_cb_data *bd = g_list_nth_data(found, 0);
+		bd = g_list_nth_data(found, 0);
 		g_badge_cb_list = g_list_delete_link(g_badge_cb_list, found);
 		free(bd);
 	}
@@ -961,11 +956,11 @@ int _badge_unregister_changed_cb(badge_change_cb callback)
 	if (!g_badge_cb_list)
 		_badge_chanaged_monitor_fini();
 
-	if (found != NULL) {
+	if (found != NULL)
 		return BADGE_ERROR_NONE;
-	} else {
+	else
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
+
 }
 
 int _badge_free(badge_h *badge)
@@ -1028,6 +1023,7 @@ char *_badge_pkgs_new(int *err, const char *pkg1, ...)
 	char *ptr = NULL;
 	gsize length;
 	va_list args;
+	char *new_pkgs = NULL;
 
 
 	if (err)
@@ -1080,7 +1076,6 @@ char *_badge_pkgs_new(int *err, const char *pkg1, ...)
 	va_end(args);
 
 	if (g_strstr_len(result, -1, caller_pkgname) == NULL) {
-		char *new_pkgs = NULL;
 		new_pkgs = g_strdup_printf("%s%s", caller_pkgname, result);
 		if (!new_pkgs) {
 			ERR("fail to alloc memory");
@@ -1108,6 +1103,7 @@ char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 	char *ptr = NULL;
 	gsize length;
 	va_list args2;
+	char *new_pkgs = NULL;
 
 	if (err)
 		*err = BADGE_ERROR_NONE;
@@ -1160,7 +1156,6 @@ char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 	va_end(args2);
 
 	if (g_strstr_len(result, -1, caller_pkgname) == NULL) {
-		char *new_pkgs = NULL;
 		new_pkgs = g_strdup_printf("%s%s", caller_pkgname, result);
 		if (!new_pkgs) {
 			ERR("fail to alloc memory");

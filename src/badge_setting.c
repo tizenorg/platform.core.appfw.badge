@@ -209,6 +209,8 @@ EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, c
 	sqlite3_stmt *stmt = NULL;
 	int sqlret;
 	const char *column = NULL;
+	int get_bytes = 0;
+	char *get_data = NULL;
 
 	if (!pkgname)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -254,8 +256,8 @@ EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, c
 
 	sqlret = sqlite3_step(stmt);
 	if (sqlret == SQLITE_ROW) {
-		int get_bytes = sqlite3_column_bytes(stmt, 0);
-		char *get_data = (char *)calloc(get_bytes + 1, sizeof(char));
+		get_bytes = sqlite3_column_bytes(stmt, 0);
+		get_data = (char *)calloc(get_bytes + 1, sizeof(char));
 		if (get_data != NULL) {
 			memcpy(get_data, sqlite3_column_text(stmt, 0),
 					get_bytes * sizeof(char));
@@ -296,9 +298,8 @@ EXPORT_API int badge_setting_property_set(const char *pkgname, const char *prope
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_set(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE) {
+	if (ret != BADGE_ERROR_NONE)
 		return ret;
-	}
 
 	return BADGE_ERROR_NONE;
 }
@@ -317,9 +318,8 @@ EXPORT_API int badge_setting_property_get(const char *pkgname, const char *prope
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_get(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE) {
+	if (ret != BADGE_ERROR_NONE)
 		return ret;
-	}
 
 	return BADGE_ERROR_NONE;
 }

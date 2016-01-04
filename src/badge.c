@@ -36,9 +36,9 @@ int badge_create(const char *pkgname, const char *writable_pkg)
 	char *caller = NULL;
 	int err = BADGE_ERROR_NONE;
 
-	if (pkgname == NULL) {
+	if (pkgname == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
+
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
@@ -111,9 +111,8 @@ int badge_remove(const char *app_id)
 	int result = BADGE_ERROR_NONE;
 	bool existing = false;
 
-	if (app_id == NULL) {
+	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	result = _badge_is_existing(app_id, &existing);
 
@@ -169,9 +168,8 @@ int badge_set_count(const char *app_id, unsigned int count)
 	int result = BADGE_ERROR_NONE;
 	bool existing = false;
 
-	if (app_id == NULL) {
+	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	result = _badge_is_existing(app_id, &existing);
 
@@ -213,9 +211,8 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 	int result = BADGE_ERROR_NONE;
 	bool existing = false;
 
-	if (app_id == NULL) {
+	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	result = _badge_is_existing(app_id, &existing);
 
@@ -254,9 +251,8 @@ int badge_get_display(const char *app_id, unsigned int *is_display)
 EXPORT_API
 int badge_register_changed_cb(badge_change_cb callback, void *data)
 {
-	if (callback == NULL) {
+	if (callback == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	return _badge_register_changed_cb(callback, data);
 }
@@ -264,9 +260,8 @@ int badge_register_changed_cb(badge_change_cb callback, void *data)
 EXPORT_API
 int badge_unregister_changed_cb(badge_change_cb callback)
 {
-	if (callback == NULL) {
+	if (callback == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
 	return _badge_unregister_changed_cb(callback);
 }

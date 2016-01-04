@@ -84,24 +84,18 @@ static inline void _set_master_started_cb(vconf_callback_fn cb)
 {
 	int ret = -1;
 
-	ret = vconf_notify_key_changed(VCONFKEY_MASTER_STARTED,
-			cb, NULL);
-	if (ret != 0) {
-		ERR("failed to notify key(%s) : %d",
-				VCONFKEY_MASTER_STARTED, ret);
-	}
+	ret = vconf_notify_key_changed(VCONFKEY_MASTER_STARTED, cb, NULL);
+	if (ret != 0)
+		ERR("failed to notify key(%s) : %d", VCONFKEY_MASTER_STARTED, ret);
 }
 
 static inline void _unset_master_started_cb(vconf_callback_fn cb)
 {
 	int ret = -1;
 
-	ret = vconf_ignore_key_changed(VCONFKEY_MASTER_STARTED,
-			cb);
-	if (ret != 0) {
-		ERR("failed to notify key(%s) : %d",
-				VCONFKEY_MASTER_STARTED, ret);
-	}
+	ret = vconf_ignore_key_changed(VCONFKEY_MASTER_STARTED, cb);
+	if (ret != 0)
+		ERR("failed to notify key(%s) : %d", VCONFKEY_MASTER_STARTED, ret);
 }
 
 int badge_ipc_is_master_ready(void)
@@ -126,12 +120,10 @@ int badge_ipc_add_deferred_task(
 	task_list *list = NULL;
 	task_list *list_new = NULL;
 
-	list_new =
-	    (task_list *) malloc(sizeof(task_list));
+	list_new = (task_list *) malloc(sizeof(task_list));
 
-	if (list_new == NULL) {
+	if (list_new == NULL)
 		return BADGE_ERROR_OUT_OF_MEMORY;
-	}
 
 	if (s_info.is_started_cb_set_task == 0) {
 		_set_master_started_cb(_master_started_cb_task);
@@ -149,9 +141,8 @@ int badge_ipc_add_deferred_task(
 	} else {
 		list = g_task_list;
 
-		while (list->next != NULL) {
+		while (list->next != NULL)
 			list = list->next;
-		}
 
 		list->next = list_new;
 		list_new->prev = list;
@@ -159,8 +150,7 @@ int badge_ipc_add_deferred_task(
 	return BADGE_ERROR_NONE;
 }
 
-int
-badge_ipc_del_deferred_task(
+int badge_ipc_del_deferred_task(
 		void (*badge_add_deferred_task)(void *data))
 {
 	task_list *list_del = NULL;
@@ -169,29 +159,26 @@ badge_ipc_del_deferred_task(
 
 	list_del = g_task_list;
 
-	if (list_del == NULL) {
+	if (list_del == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
 
-	while (list_del->prev != NULL) {
+	while (list_del->prev != NULL)
 		list_del = list_del->prev;
-	}
 
 	do {
 		if (list_del->task_cb == badge_add_deferred_task) {
 			list_prev = list_del->prev;
 			list_next = list_del->next;
 
-			if (list_prev == NULL) {
+			if (list_prev == NULL)
 				g_task_list = list_next;
-			} else {
+			else
 				list_prev->next = list_next;
-			}
 
 			if (list_next == NULL) {
-				if (list_prev != NULL) {
+				if (list_prev != NULL)
 					list_prev->next = NULL;
-				}
+
 			} else {
 				list_next->prev = list_prev;
 			}
@@ -218,9 +205,8 @@ static void _do_deferred_task(void)
 	task_list *list_do = NULL;
 	task_list *list_temp = NULL;
 
-	if (g_task_list == NULL) {
+	if (g_task_list == NULL)
 		return;
-	}
 
 	list_do = g_task_list;
 	g_task_list = NULL;
@@ -229,9 +215,8 @@ static void _do_deferred_task(void)
 		s_info.is_started_cb_set_task = 0;
 	}
 
-	while (list_do->prev != NULL) {
+	while (list_do->prev != NULL)
 		list_do = list_do->prev;
-	}
 
 	while (list_do != NULL) {
 		if (list_do->task_cb != NULL) {
@@ -244,36 +229,33 @@ static void _do_deferred_task(void)
 	}
 }
 
-static void _master_started_cb_service(keynode_t *node,
-		void *data)
+static void _master_started_cb_service(keynode_t *node, void *data)
 {
 	int ret = BADGE_ERROR_NONE;
 
 	if (badge_ipc_is_master_ready()) {
 		ERR("try to register a badge service");
 		ret = badge_ipc_monitor_deregister();
-		if (ret != BADGE_ERROR_NONE) {
+		if (ret != BADGE_ERROR_NONE)
 			ERR("failed to deregister a monitor");
-		}
+
 		ret = badge_ipc_monitor_register();
-		if (ret != BADGE_ERROR_NONE) {
+		if (ret != BADGE_ERROR_NONE)
 			ERR("failed to register a monitor");
-		}
+
 	} else {
 		ERR("try to unregister a badge service");
 		ret = badge_ipc_monitor_deregister();
-		if (ret != BADGE_ERROR_NONE) {
+		if (ret != BADGE_ERROR_NONE)
 			ERR("failed to deregister a monitor");
-		}
+
 	}
 }
 
-static void _master_started_cb_task(keynode_t *node,
-		void *data)
+static void _master_started_cb_task(keynode_t *node, void *data)
 {
-	if (badge_ipc_is_master_ready()) {
+	if (badge_ipc_is_master_ready())
 		_do_deferred_task();
-	}
 }
 
 /*!
@@ -291,13 +273,13 @@ static struct packet *_handler_insert_badge(pid_t pid, int handle, const struct 
 
 	DBG("");
 
-	//return code, pkgname
+	/* return code, pkgname */
 	if (packet_get(packet, "is", &ret, &pkgname) == 2) {
-		if (ret == BADGE_ERROR_NONE) {
+		if (ret == BADGE_ERROR_NONE)
 			badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0);
-		} else {
+		else
 			ERR("failed to insert a new badge:%d", ret);
-		}
+
 	} else {
 		ERR("failed to get data from a packet");
 	}
@@ -318,11 +300,11 @@ static struct packet *_handler_delete_badge(pid_t pid, int handle, const struct 
 	DBG("");
 
 	if (packet_get(packet, "is", &ret, &pkgname) == 2) {
-		if (ret == BADGE_ERROR_NONE) {
+		if (ret == BADGE_ERROR_NONE)
 			badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0);
-		} else {
+		else
 			ERR("failed to remove a badge:%d", ret);
-		}
+
 	} else {
 		ERR("failed to get data from a packet");
 	}
@@ -344,11 +326,11 @@ static struct packet *_handler_set_badge_count(pid_t pid, int handle, const stru
 	DBG("");
 
 	if (packet_get(packet, "isi", &ret, &pkgname, &count) == 3) {
-		if (ret == BADGE_ERROR_NONE) {
+		if (ret == BADGE_ERROR_NONE)
 			badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count);
-		} else {
+		else
 			ERR("failed to update count of badge:%d", ret);
-		}
+
 	} else {
 		ERR("failed to get data from a packet");
 	}
@@ -370,11 +352,11 @@ static struct packet *_handler_set_display_option(pid_t pid, int handle, const s
 	DBG("");
 
 	if (packet_get(packet, "isi", &ret, &pkgname, &is_display) == 3) {
-		if (ret == BADGE_ERROR_NONE) {
+		if (ret == BADGE_ERROR_NONE)
 			badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
-		} else {
+		else
 			ERR("failed to update the display option of badge:%d, %d", ret, is_display);
-		}
+
 	} else {
 		ERR("failed to get data from a packet");
 	}
@@ -395,9 +377,9 @@ static int _handler_service_register(pid_t pid, int handle, const struct packet 
 		ERR("Packet is not valid\n");
 		ret = BADGE_ERROR_INVALID_PARAMETER;
 	} else {
-		if (ret == BADGE_ERROR_NONE) {
+		if (ret == BADGE_ERROR_NONE)
 			badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0);
-		}
+
 	}
 	return ret;
 }
@@ -432,11 +414,10 @@ static int badge_ipc_monitor_register(void)
 		},
 	};
 
-	if (s_info.initialized == 1) {
+	if (s_info.initialized == 1)
 		return BADGE_ERROR_NONE;
-	} else {
+	else
 		s_info.initialized = 1;
-	}
 
 	ERR("register a service\n");
 	com_core_packet_use_thread(1);
@@ -470,9 +451,8 @@ static int badge_ipc_monitor_register(void)
 
 int badge_ipc_monitor_deregister(void)
 {
-	if (s_info.initialized == 0) {
+	if (s_info.initialized == 0)
 		return BADGE_ERROR_NONE;
-	}
 
 	com_core_packet_client_fini(s_info.server_fd);
 	s_info.server_fd = BADGE_ERROR_INVALID_PARAMETER;
@@ -486,9 +466,8 @@ int badge_ipc_monitor_init(void)
 {
 	int ret = BADGE_ERROR_NONE;
 
-	if (badge_ipc_is_master_ready()) {
+	if (badge_ipc_is_master_ready())
 		ret = badge_ipc_monitor_register();
-	}
 
 	if (s_info.is_started_cb_set_svc == 0) {
 		_set_master_started_cb(_master_started_cb_service);
@@ -538,11 +517,10 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 		}
 		packet_unref(result);
 	} else {
-		if (badge_ipc_is_master_ready() == 1) {
+		if (badge_ipc_is_master_ready() == 1)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_SERVICE_NOT_READY;
-		}
 	}
 
 	return BADGE_ERROR_NONE;
@@ -573,11 +551,10 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller)
 		}
 		packet_unref(result);
 	} else {
-		if (badge_ipc_is_master_ready() == 1) {
+		if (badge_ipc_is_master_ready() == 1)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_SERVICE_NOT_READY;
-		}
 	}
 
 	return BADGE_ERROR_NONE;
@@ -608,11 +585,10 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 		}
 		packet_unref(result);
 	} else {
-		if (badge_ipc_is_master_ready() == 1) {
+		if (badge_ipc_is_master_ready() == 1)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_SERVICE_NOT_READY;
-		}
 	}
 
 	return BADGE_ERROR_NONE;
@@ -643,11 +619,10 @@ int badge_ipc_request_set_display(const char *pkgname, const char *caller, int d
 		}
 		packet_unref(result);
 	} else {
-		if (badge_ipc_is_master_ready() == 1) {
+		if (badge_ipc_is_master_ready() == 1)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_SERVICE_NOT_READY;
-		}
 	}
 
 	return BADGE_ERROR_NONE;
@@ -700,9 +675,9 @@ int badge_ipc_setting_property_get(const char *pkgname, const char *property, ch
 			packet_unref(result);
 			return BADGE_ERROR_IO_ERROR;
 		}
-		if (status == BADGE_ERROR_NONE && ret != NULL) {
+		if (status == BADGE_ERROR_NONE && ret != NULL)
 			*value = strdup(ret);
-		}
+
 		packet_unref(result);
 	} else {
 		ERR("failed to receive answer(delete)");
