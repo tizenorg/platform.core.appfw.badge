@@ -296,9 +296,8 @@ EXPORT_API int badge_setting_property_set(const char *pkgname, const char *prope
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_set(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE) {
+	if (ret != BADGE_ERROR_NONE)
 		return ret;
-	}
 
 	return BADGE_ERROR_NONE;
 }
@@ -317,9 +316,8 @@ EXPORT_API int badge_setting_property_get(const char *pkgname, const char *prope
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	ret = badge_ipc_setting_property_get(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE) {
+	if (ret != BADGE_ERROR_NONE)
 		return ret;
-	}
 
 	return BADGE_ERROR_NONE;
 }

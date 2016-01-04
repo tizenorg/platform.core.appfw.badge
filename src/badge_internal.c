@@ -231,18 +231,16 @@ static int _is_same_certinfo(const char *caller, const char *pkgname)
 	int ret = PACKAGE_MANAGER_ERROR_NONE;
 	package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
 
-	if (!caller) {
+	if (!caller)
 		return 0;
-	}
-	if (!pkgname) {
+
+	if (!pkgname)
 		return 0;
-	}
 
 	ret = package_manager_compare_package_cert_info(pkgname, caller, &compare_result);
 	if (ret == PACKAGE_MANAGER_ERROR_NONE &&
-		compare_result == PACKAGE_MANAGER_COMPARE_MATCH) {
+		compare_result == PACKAGE_MANAGER_COMPARE_MATCH)
 		return 1;
-	}
 
 	return 0;
 }
@@ -268,9 +266,8 @@ static int _badge_check_writable(const char *caller,
 	if (g_strcmp0(caller, pkgname) == 0)
 		return BADGE_ERROR_NONE;
 
-	if (_is_same_certinfo(caller, pkgname) == 1) {
+	if (_is_same_certinfo(caller, pkgname) == 1)
 		return BADGE_ERROR_NONE;
-	}
 
 	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %q WHERE " \
 			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
@@ -673,11 +670,10 @@ int _badget_get_count(const char *pkgname, unsigned int *count)
 	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		if (sqlret == SQLITE_PERM) {
+		if (sqlret == SQLITE_PERM)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_FROM_DB;
-		}
 	}
 
 	ret = _badge_check_data_inserted(pkgname, db);
@@ -817,18 +813,17 @@ int _badget_get_display(const char *pkgname, unsigned int *is_display)
 	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
 	if (sqlret != SQLITE_OK || !db) {
 		ERR("fail to db_util_open - [%d]", sqlret);
-		if (sqlret == SQLITE_PERM) {
+		if (sqlret == SQLITE_PERM)
 			return BADGE_ERROR_PERMISSION_DENIED;
-		} else {
+		else
 			return BADGE_ERROR_FROM_DB;
-		}
 	}
 
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
-		if (ret == BADGE_ERROR_NOT_EXIST) {
+		if (ret == BADGE_ERROR_NOT_EXIST)
 			*is_display = 1;
-		}
+
 		result = ret;
 		goto return_close_db;
 	}
@@ -961,11 +956,11 @@ int _badge_unregister_changed_cb(badge_change_cb callback)
 	if (!g_badge_cb_list)
 		_badge_chanaged_monitor_fini();
 
-	if (found != NULL) {
+	if (found != NULL)
 		return BADGE_ERROR_NONE;
-	} else {
+	else
 		return BADGE_ERROR_INVALID_PARAMETER;
-	}
+
 }
 
 int _badge_free(badge_h *badge)
