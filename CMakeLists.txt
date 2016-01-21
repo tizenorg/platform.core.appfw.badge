@@ -37,6 +37,7 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 
 INCLUDE(FindPkgConfig)
 pkg_check_modules(pkgs REQUIRED
+	openssl
 	aul
 	dlog
 	dbus-1

@@ -14,6 +14,7 @@ BuildRequires: pkgconfig(com-core)
 BuildRequires: pkgconfig(capi-appfw-package-manager)
 BuildRequires: pkgconfig(db-util)
 BuildRequires: pkgconfig(libtzplatform-config)
+BuildRequires: pkgconfig(openssl)
 BuildRequires: cmake
 Requires(post): /sbin/ldconfig
 requires(postun): /sbin/ldconfig

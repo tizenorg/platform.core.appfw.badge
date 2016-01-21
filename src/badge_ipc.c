@@ -22,12 +22,10 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <gio/gio.h>
+#include <openssl/md5.h>
 
 #include <vconf.h>
-
-#include <packet.h>
-#include <com-core.h>
-#include <com-core_packet.h>
 
 #include "badge.h"
 #include "badge_log.h"
@@ -35,31 +33,26 @@
 #include "badge_internal.h"
 #include "badge_ipc.h"
 
+#define BADGE_SERVICE_BUS_NAME "org.tizen.badge_service"
+#define BADGE_SERVICE_INTERFACE_NAME "org.tizen.badge_service"
+#define BADGE_SERVICE_OBJECT_PATH "/org/tizen/badge_service"
+
+#define PROVIDER_BUS_NAME "org.tizen.data_provider_service"
+#define PROVIDER_OBJECT_PATH "/org/tizen/data_provider_service"
+#define PROVIDER_BADGE_INTERFACE_NAME "org.tizen.data_provider_badge_service"
+
+#define BADGE_IPC_DBUS_PREFIX "org.tizen.badge_ipc_"
+#define BADGE_IPC_OBJECT_PATH "/org/tizen/badge_service"
+
+#define DBUS_SERVICE_DBUS "org.freedesktop.DBus"
+#define DBUS_PATH_DBUS "/org/freedesktop/DBus"
+#define DBUS_INTERFACE_DBUS "org.freedesktop.DBus"
+
 #define BADGE_IPC_TIMEOUT 1.0
 
 #if !defined(VCONFKEY_MASTER_STARTED)
 #define VCONFKEY_MASTER_STARTED "memory/data-provider-master/started"
 #endif
-
-static struct info {
-	int server_fd;
-	int client_fd;
-	const char *socket_file;
-	struct {
-		int (*request_cb)(const char *appid, const char *name, int type, const char *content, const char *icon, pid_t pid, double period, int allow_duplicate, void *data);
-		void *data;
-	} server_cb;
-	int initialized;
-	int is_started_cb_set_svc;
-	int is_started_cb_set_task;
-} s_info = {
-	.server_fd = -1,
-	.client_fd = -1,
-	.socket_file = BADGE_ADDR,
-	.initialized = 0,
-	.is_started_cb_set_svc = 0,
-	.is_started_cb_set_task = 0,
-};
 
 typedef struct _task_list task_list;
 struct _task_list {
@@ -69,13 +62,15 @@ struct _task_list {
 	void (*task_cb) (void *data);
 	void *data;
 };
-
 static task_list *g_task_list;
 
-static int badge_ipc_monitor_register(void);
-static int badge_ipc_monitor_deregister(void);
+static char *_bus_name = NULL;
+static GDBusConnection *_gdbus_conn = NULL;
+static int monitor_id = 0;
+
 static void _do_deferred_task(void);
 static void _master_started_cb_task(keynode_t *node, void *data);
+static int is_started_cb_set_task = 0;
 
 /*!
  * functions to check state of master
@@ -125,9 +120,9 @@ int badge_ipc_add_deferred_task(
 	if (list_new == NULL)
 		return BADGE_ERROR_OUT_OF_MEMORY;
 
-	if (s_info.is_started_cb_set_task == 0) {
+	if (is_started_cb_set_task == 0) {
 		_set_master_started_cb(_master_started_cb_task);
-		s_info.is_started_cb_set_task = 1;
+		is_started_cb_set_task = 1;
 	}
 
 	list_new->next = NULL;
@@ -186,9 +181,9 @@ int badge_ipc_del_deferred_task(
 			free(list_del);
 
 			if (g_task_list == NULL) {
-				if (s_info.is_started_cb_set_task == 1) {
+				if (is_started_cb_set_task == 1) {
 					_unset_master_started_cb(_master_started_cb_task);
-					s_info.is_started_cb_set_task = 0;
+					is_started_cb_set_task = 0;
 				}
 			}
 
@@ -210,9 +205,9 @@ static void _do_deferred_task(void)
 
 	list_do = g_task_list;
 	g_task_list = NULL;
-	if (s_info.is_started_cb_set_task == 1) {
+	if (is_started_cb_set_task == 1) {
 		_unset_master_started_cb(_master_started_cb_task);
-		s_info.is_started_cb_set_task = 0;
+		is_started_cb_set_task = 0;
 	}
 
 	while (list_do->prev != NULL)
@@ -229,460 +224,477 @@ static void _do_deferred_task(void)
 	}
 }
 
-static void _master_started_cb_service(keynode_t *node, void *data)
-{
-	int ret = BADGE_ERROR_NONE;
-
-	if (badge_ipc_is_master_ready()) {
-		ERR("try to register a badge service");
-		ret = badge_ipc_monitor_deregister();
-		if (ret != BADGE_ERROR_NONE)
-			ERR("failed to deregister a monitor");
-
-		ret = badge_ipc_monitor_register();
-		if (ret != BADGE_ERROR_NONE)
-			ERR("failed to register a monitor");
-
-	} else {
-		ERR("try to unregister a badge service");
-		ret = badge_ipc_monitor_deregister();
-		if (ret != BADGE_ERROR_NONE)
-			ERR("failed to deregister a monitor");
-
-	}
-}
-
 static void _master_started_cb_task(keynode_t *node, void *data)
 {
 	if (badge_ipc_is_master_ready())
 		_do_deferred_task();
 }
 
-/*!
- * functions to handler services
+/*
+ * dbus handler implementation
  */
-static struct packet *_handler_insert_badge(pid_t pid, int handle, const struct packet *packet)
+static void _insert_badge_notify(GVariant *parameters, GDBusMethodInvocation *invocation)
 {
 	int ret = 0;
 	char *pkgname = NULL;
 
-	if (!packet) {
-		ERR("a packet is null");
-		return NULL;
-	}
-
-	DBG("");
-
-	/* return code, pkgname */
-	if (packet_get(packet, "is", &ret, &pkgname) == 2) {
-		if (ret == BADGE_ERROR_NONE)
-			badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0);
-		else
-			ERR("failed to insert a new badge:%d", ret);
-
-	} else {
-		ERR("failed to get data from a packet");
-	}
-
-	return NULL;
+	g_variant_get(parameters, "(is)", &ret, &pkgname);
+	if (ret == BADGE_ERROR_NONE)
+		badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0);
+	else
+		ERR("failed to insert a new badge:%d", ret);
 }
 
-static struct packet *_handler_delete_badge(pid_t pid, int handle, const struct packet *packet)
+static void _delete_badge_notify(GVariant *parameters, GDBusMethodInvocation *invocation)
 {
 	int ret = 0;
 	char *pkgname = NULL;
 
-	if (!packet) {
-		ERR("a packet is null");
-		return NULL;
-	}
-
-	DBG("");
-
-	if (packet_get(packet, "is", &ret, &pkgname) == 2) {
-		if (ret == BADGE_ERROR_NONE)
-			badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0);
-		else
-			ERR("failed to remove a badge:%d", ret);
-
-	} else {
-		ERR("failed to get data from a packet");
-	}
-
-	return NULL;
+	g_variant_get(parameters, "(is)", &ret, &pkgname);
+	if (ret == BADGE_ERROR_NONE)
+		badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0);
+	else
+		ERR("failed to remove a badge:%d", ret);
 }
 
-static struct packet *_handler_set_badge_count(pid_t pid, int handle, const struct packet *packet)
+static void _set_badge_notify(GVariant *parameters, GDBusMethodInvocation *invocation)
 {
 	int ret = 0;
 	char *pkgname = NULL;
 	int count = 0;
 
-	if (!packet) {
-		ERR("a packet is null");
-		return NULL;
-	}
-
-	DBG("");
-
-	if (packet_get(packet, "isi", &ret, &pkgname, &count) == 3) {
-		if (ret == BADGE_ERROR_NONE)
-			badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count);
-		else
-			ERR("failed to update count of badge:%d", ret);
-
-	} else {
-		ERR("failed to get data from a packet");
-	}
-
-	return NULL;
+	g_variant_get(parameters, "(isi)", &ret, &pkgname, &count);
+	if (ret == BADGE_ERROR_NONE)
+		badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count);
+	else
+		ERR("failed to remove a badge:%d", ret);
 }
 
-static struct packet *_handler_set_display_option(pid_t pid, int handle, const struct packet *packet)
+static void _set_disp_option_notify(GVariant *parameters, GDBusMethodInvocation *invocation)
 {
 	int ret = 0;
 	char *pkgname = NULL;
 	int is_display = 0;
 
-	if (!packet) {
-		ERR("a packet is null");
-		return NULL;
-	}
-
-	DBG("");
-
-	if (packet_get(packet, "isi", &ret, &pkgname, &is_display) == 3) {
-		if (ret == BADGE_ERROR_NONE)
-			badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
-		else
-			ERR("failed to update the display option of badge:%d, %d", ret, is_display);
-
-	} else {
-		ERR("failed to get data from a packet");
-	}
-
-	return NULL;
-}
-
-static int _handler_service_register(pid_t pid, int handle, const struct packet *packet, void *data)
-{
-	int ret;
-
-	DBG("");
-
-	if (!packet) {
-		ERR("Packet is not valid\n");
-		ret = BADGE_ERROR_INVALID_PARAMETER;
-	} else if (packet_get(packet, "i", &ret) != 1) {
-		ERR("Packet is not valid\n");
-		ret = BADGE_ERROR_INVALID_PARAMETER;
-	} else {
-		if (ret == BADGE_ERROR_NONE)
-			badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0);
-
-	}
-	return ret;
-}
-
-/*!
- * functions to initialize and register a monitor
- */
-static int badge_ipc_monitor_register(void)
-{
-	int ret;
-	struct packet *packet;
-	static struct method service_table[] = {
-		{
-			.cmd = "insert_badge",
-			.handler = _handler_insert_badge,
-		},
-		{
-			.cmd = "delete_badge",
-			.handler = _handler_delete_badge,
-		},
-		{
-			.cmd = "set_badge_count",
-			.handler = _handler_set_badge_count,
-		},
-		{
-			.cmd = "set_disp_option",
-			.handler = _handler_set_display_option,
-		},
-		{
-			.cmd = NULL,
-			.handler = NULL,
-		},
-	};
-
-	if (s_info.initialized == 1)
-		return BADGE_ERROR_NONE;
+	g_variant_get(parameters, "(isi)", &ret, &pkgname, &is_display);
+	if (ret == BADGE_ERROR_NONE)
+		badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
 	else
-		s_info.initialized = 1;
+		ERR("failed to remove a badge:%d", ret);
+}
 
-	ERR("register a service\n");
-	com_core_packet_use_thread(1);
+static void _dbus_method_call_handler(GDBusConnection *conn,
+		const gchar *sender, const gchar *object_path, const gchar *iface_name,
+		const gchar *method_name, GVariant *parameters,
+		GDBusMethodInvocation *invocation, gpointer user_data)
+{
+	DBG("method_name: %s", method_name);
+	if (g_strcmp0(method_name, "insert_badge_notify") == 0)
+		_insert_badge_notify(parameters, invocation);
+	else if (g_strcmp0(method_name, "delete_badge_notify") == 0)
+		_delete_badge_notify(parameters, invocation);
+	else if (g_strcmp0(method_name, "set_badge_notify") == 0)
+		_set_badge_notify(parameters, invocation);
+	else if (g_strcmp0(method_name, "set_disp_option_notify") == 0)
+		_set_disp_option_notify(parameters, invocation);
+}
 
-	s_info.server_fd = com_core_packet_client_init(s_info.socket_file, 0, service_table);
-	if (s_info.server_fd < 0) {
-		ERR("Failed to make a connection to the master\n");
-		return BADGE_ERROR_IO_ERROR;
+static char *_get_encoded_name(const char *appid)
+{
+	int prefix_len = strlen(BADGE_IPC_DBUS_PREFIX);
+
+	unsigned char c[MD5_DIGEST_LENGTH] = { 0 };
+	char *md5_interface = NULL;
+	char *temp;
+	int index = 0;
+	MD5_CTX mdContext;
+	int encoded_name_len = prefix_len + (MD5_DIGEST_LENGTH * 2) + 2;
+	int appid_len = strlen(appid) + 1;
+
+	MD5_Init(&mdContext);
+	MD5_Update(&mdContext, appid, appid_len);
+	MD5_Final(c, &mdContext);
+
+	md5_interface = (char *) calloc(encoded_name_len, sizeof(char));
+	if (md5_interface == NULL) {
+		ERR("md5_interface calloc failed!!");
+		return 0;
 	}
 
-	packet = packet_create("service_register", "");
-	if (!packet) {
-		ERR("Failed to build a packet\n");
-		return BADGE_ERROR_IO_ERROR;
+	snprintf(md5_interface, encoded_name_len, "%s", BADGE_IPC_DBUS_PREFIX);
+	temp = md5_interface;
+	temp += prefix_len;
+
+	for (index = 0; index < MD5_DIGEST_LENGTH; index++) {
+		snprintf(temp, 3, "%02x", c[index]);
+		temp += 2;
 	}
 
-	ret = com_core_packet_async_send(s_info.server_fd, packet, 1.0, _handler_service_register, NULL);
-	DBG("Service register sent: %d\n", ret);
-	packet_destroy(packet);
-	if (ret != 0) {
-		com_core_packet_client_fini(s_info.server_fd);
-		s_info.server_fd = BADGE_ERROR_INVALID_PARAMETER;
-		ret = BADGE_ERROR_IO_ERROR;
-	} else {
-		ret = BADGE_ERROR_NONE;
+	DBG("encoded_name : %s ", md5_interface);
+	return md5_interface;
+}
+
+static const GDBusInterfaceVTable interface_vtable = {
+		_dbus_method_call_handler,
+		NULL,
+		NULL };
+
+static void _badge_on_bus_acquired(GDBusConnection *connection,
+		const gchar *name, gpointer user_data) {
+	ERR("_badge_on_bus_acquired : %s", name);
+}
+
+static void _badge_on_name_acquired(GDBusConnection *connection,
+		const gchar *name, gpointer user_data) {
+	ERR("_badge_on_name_acquired : %s", name);
+}
+
+static void _badge_on_name_lost(GDBusConnection *connection, const gchar *name,
+		gpointer user_data) {
+	ERR("_badge_on_name_lost : %s", name);
+}
+
+int _register_badge_dbus_interface(const char *appid) {
+	GDBusNodeInfo *introspection_data = NULL;
+	int registration_id = 0;
+	static gchar introspection_prefix[] = "<node>"
+			"  <interface name='";
+	static gchar introspection_postfix[] =
+			"'>"
+			"        <method name='insert_badge_notify'>"
+			"          <arg type='i' name='ret' direction='in'/>"
+			"          <arg type='s' name='pkgname' direction='in'/>"
+			"        </method>"
+			"        <method name='delete_badge_notify'>"
+			"          <arg type='i' name='ret' direction='in'/>"
+			"          <arg type='s' name='pkgname' direction='in'/>"
+			"        </method>"
+			"        <method name='set_badge_notify'>"
+			"          <arg type='i' name='ret' direction='in'/>"
+			"          <arg type='s' name='pkgname' direction='in'/>"
+			"          <arg type='i' name='count' direction='in'/>"
+			"        </method>"
+			"        <method name='set_disp_option_notify'>"
+			"          <arg type='i' name='ret' direction='in'/>"
+			"          <arg type='s' name='pkgname' direction='in'/>"
+			"          <arg type='i' name='is_display' direction='in'/>"
+			"        </method>"
+			"        <method name='set_noti_property_notify'>"
+			"          <arg type='i' name='ret' direction='in'/>"
+			"          <arg type='s' name='pkgname' direction='in'/>"
+			"          <arg type='i' name='is_display' direction='in'/>"
+			"        </method>"
+			"  </interface>"
+			"</node>";
+	char *introspection_xml = NULL;
+	int introspection_xml_len = 0;
+	int owner_id = 0;
+	GVariant *result = NULL;
+	char *interface_name = NULL;
+
+	_bus_name = _get_encoded_name(appid);
+	interface_name = _bus_name;
+
+	introspection_xml_len = strlen(introspection_prefix)
+			+ strlen(interface_name) + strlen(introspection_postfix) + 1;
+
+	introspection_xml = (char *) calloc(introspection_xml_len, sizeof(char));
+	if (!introspection_xml) {
+		ERR("out of memory");
+		goto out;
 	}
 
-	DBG("Server FD: %d\n", s_info.server_fd);
+	owner_id = g_bus_own_name(G_BUS_TYPE_SYSTEM, _bus_name,
+			G_BUS_NAME_OWNER_FLAGS_NONE, _badge_on_bus_acquired,
+			_badge_on_name_acquired, _badge_on_name_lost,
+			NULL, NULL);
+	if (!owner_id) {
+		ERR("g_bus_own_name error");
+		g_dbus_node_info_unref(introspection_data);
+		goto out;
+	}
+
+	DBG("Acquiring the own name : %d", owner_id);
+
+	snprintf(introspection_xml, introspection_xml_len, "%s%s%s",
+			introspection_prefix, interface_name, introspection_postfix);
+
+	introspection_data = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
+	if (!introspection_data) {
+		ERR("g_dbus_node_info_new_for_xml() is failed.");
+		goto out;
+	}
+
+	registration_id = g_dbus_connection_register_object(
+			_gdbus_conn,
+			BADGE_SERVICE_OBJECT_PATH,
+			introspection_data->interfaces[0],
+			&interface_vtable, NULL, NULL, NULL);
+
+	DBG("registration_id %d", registration_id);
+	if (registration_id == 0) {
+		ERR("Failed to g_dbus_connection_register_object");
+		goto out;
+	}
+	out: if (introspection_data)
+		g_dbus_node_info_unref(introspection_data);
+	if (introspection_xml)
+		free(introspection_xml);
+	if (result)
+		g_variant_unref(result);
+
+	return registration_id;
+}
+
+int _dbus_init(void) {
+	bool ret = false;
+	GError *error = NULL;
+
+	_gdbus_conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (_gdbus_conn == NULL) {
+		if (error != NULL) {
+			ERR("Failed to get dbus [%s]", error->message);
+			g_error_free(error);
+		}
+		goto out;
+	}
+	ret = true;
+	out: if (!_gdbus_conn)
+		g_object_unref(_gdbus_conn);
+
+	return ret;
+
+}
+
+int badge_dbus_init() {
+	int ret = BADGE_ERROR_NONE;
+	int id = 0;
+	if (_gdbus_conn == NULL) {
+		_dbus_init();
+		id = _register_badge_dbus_interface(_badge_get_pkgname_by_pid());
+		if (id < 1) {
+			ret = BADGE_ERROR_IO_ERROR;
+			ERR("Failed to _register_badge_dbus_interface");
+		} else {
+			monitor_id = id;
+		}
+	}
 	return ret;
 }
 
-int badge_ipc_monitor_deregister(void)
-{
-	if (s_info.initialized == 0)
-		return BADGE_ERROR_NONE;
 
-	com_core_packet_client_fini(s_info.server_fd);
-	s_info.server_fd = BADGE_ERROR_INVALID_PARAMETER;
+/*
+ * implement user request
+ */
+int _send_sync_noti(GVariant *body, GDBusMessage **reply, char *cmd) {
+	GError *err = NULL;
+	GDBusMessage *msg = NULL;
 
-	s_info.initialized = 0;
+	msg = g_dbus_message_new_method_call(
+			PROVIDER_BUS_NAME,
+			PROVIDER_OBJECT_PATH,
+			PROVIDER_BADGE_INTERFACE_NAME,
+			cmd);
+	if (!msg) {
+		ERR("Can't allocate new method call");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
+	if (body != NULL)
+		g_dbus_message_set_body(msg, body);
+	*reply = g_dbus_connection_send_message_with_reply_sync(
+			_gdbus_conn,
+			msg,
+			G_DBUS_SEND_MESSAGE_FLAGS_NONE,
+			-1,
+			NULL,
+			NULL,
+			&err);
+
+	if (!*reply) {
+		if (err != NULL) {
+			ERR("No reply. error = %s", err->message);
+			g_error_free(err);
+		}
+		//		if (notification_ipc_is_master_ready() == 1)
+		//			return NOTIFICATION_ERROR_PERMISSION_DENIED;
+		//		else
+		return BADGE_ERROR_SERVICE_NOT_READY;
+	}
+	ERR("_send_sync_noti done !!");
 	return BADGE_ERROR_NONE;
+
+}
+
+int _send_service_register()
+{
+	GVariant *body = NULL;
+	GDBusMessage *reply = NULL;
+	int result = BADGE_ERROR_NONE;
+
+	body = g_variant_new("(s)", _bus_name);
+	result = _send_sync_noti(body, &reply, "service_register");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+
+	ERR("_send_service_register done = %s", _bus_name);
+	return result;
 }
 
 int badge_ipc_monitor_init(void)
 {
+	DBG("register a service\n");
 	int ret = BADGE_ERROR_NONE;
-
-	if (badge_ipc_is_master_ready())
-		ret = badge_ipc_monitor_register();
-
-	if (s_info.is_started_cb_set_svc == 0) {
-		_set_master_started_cb(_master_started_cb_service);
-		s_info.is_started_cb_set_svc = 1;
+	ret = badge_dbus_init();
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", ret);
+		return ret;
 	}
-
+	ret = _send_service_register();
 	return ret;
 }
 
 int badge_ipc_monitor_fini(void)
 {
-	int ret = BADGE_ERROR_NONE;
-
-	if (s_info.is_started_cb_set_svc == 1) {
-		_unset_master_started_cb(_master_started_cb_service);
-		s_info.is_started_cb_set_svc = 0;
-	}
-
-	ret = badge_ipc_monitor_deregister();
-
-	return ret;
+	g_bus_unown_name(monitor_id);
+	return BADGE_ERROR_NONE;
 }
-
 
 int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller)
 {
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
 
-	packet = packet_create("insert_badge", "sss", pkgname, writable_pkg, caller);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "i", &ret) != 1) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-
-		if (ret != BADGE_ERROR_NONE) {
-			packet_unref(result);
-			return ret;
-		}
-		packet_unref(result);
-	} else {
-		if (badge_ipc_is_master_ready() == 1)
-			return BADGE_ERROR_PERMISSION_DENIED;
-		else
-			return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(sss)", pkgname, writable_pkg, caller);
 
-	return BADGE_ERROR_NONE;
+	result = _send_sync_noti(body, &reply, "insert_badge");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+	DBG("badge_ipc_request_insert done [result: %d]", result);
+	return result;
 }
 
 int badge_ipc_request_delete(const char *pkgname, const char *caller)
 {
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
 
-	packet = packet_create("delete_badge", "ss", pkgname, caller);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "i", &ret) != 1) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-
-		if (ret != BADGE_ERROR_NONE) {
-			packet_unref(result);
-			return ret;
-		}
-		packet_unref(result);
-	} else {
-		if (badge_ipc_is_master_ready() == 1)
-			return BADGE_ERROR_PERMISSION_DENIED;
-		else
-			return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(ss)", pkgname, caller);
 
-	return BADGE_ERROR_NONE;
+	result = _send_sync_noti(body, &reply, "delete_badge");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+	DBG("badge_ipc_request_insert done [result: %d]", result);
+	return result;
 }
 
 int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count)
 {
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
 
-	packet = packet_create("set_badge_count", "ssi", pkgname, caller, count);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "i", &ret) != 1) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-
-		if (ret != BADGE_ERROR_NONE) {
-			packet_unref(result);
-			return ret;
-		}
-		packet_unref(result);
-	} else {
-		if (badge_ipc_is_master_ready() == 1)
-			return BADGE_ERROR_PERMISSION_DENIED;
-		else
-			return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(ssi)", pkgname, caller, count);
 
-	return BADGE_ERROR_NONE;
+	result = _send_sync_noti(body, &reply, "set_badge_count");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+	DBG("badge_ipc_request_set_count done [result: %d]", result);
+	return result;
 }
 
 int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option)
 {
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
 
-	packet = packet_create("set_disp_option", "ssi", pkgname, caller, display_option);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "i", &ret) != 1) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-
-		if (ret != BADGE_ERROR_NONE) {
-			packet_unref(result);
-			return ret;
-		}
-		packet_unref(result);
-	} else {
-		if (badge_ipc_is_master_ready() == 1)
-			return BADGE_ERROR_PERMISSION_DENIED;
-		else
-			return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(ssi)", pkgname, caller, display_option);
 
-	return BADGE_ERROR_NONE;
+	result = _send_sync_noti(body, &reply, "set_disp_option");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+	DBG("badge_ipc_request_set_display done [result: %d]", result);
+	return result;
 }
 
 int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value)
 {
-	int status = 0;
-	int ret = 0;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
 
-	packet = packet_create("set_noti_property", "sss", pkgname, property, value);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "ii", &status, &ret) != 2) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-		packet_unref(result);
-	} else {
-		ERR("failed to receive answer(delete)");
-		return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(sss)", pkgname, property, value);
 
-	return status;
+	result = _send_sync_noti(body, &reply, "set_noti_property");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(i)", &result);
+	}
+	DBG("badge_ipc_setting_property_set done [result: %d]", result);
+	return result;
 }
 
 int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value)
 {
-	int status = 0;
-	char *ret = NULL;
-	struct packet *packet;
-	struct packet *result;
+	int result = BADGE_ERROR_NONE;
+	GDBusMessage *reply = NULL;
+	GVariant *body = NULL;
+	char *ret_val = NULL;
 
-	packet = packet_create("get_noti_property", "ss", pkgname, property);
-	result = com_core_packet_oneshot_send(BADGE_ADDR,
-			packet,
-			BADGE_IPC_TIMEOUT);
-	packet_destroy(packet);
-
-	if (result != NULL) {
-		if (packet_get(result, "is", &status, &ret) != 2) {
-			ERR("Failed to get a result packet");
-			packet_unref(result);
-			return BADGE_ERROR_IO_ERROR;
-		}
-		if (status == BADGE_ERROR_NONE && ret != NULL)
-			*value = strdup(ret);
-
-		packet_unref(result);
-	} else {
-		ERR("failed to receive answer(delete)");
-		return BADGE_ERROR_SERVICE_NOT_READY;
+	result = badge_dbus_init();
+	if (result != BADGE_ERROR_NONE) {
+		ERR("Can't init dbus %d", result);
+		return result;
 	}
+	body = g_variant_new("(ss)", pkgname, property);
 
-	return status;
+	result = _send_sync_noti(body, &reply, "get_noti_property");
+	if (result == BADGE_ERROR_NONE) {
+		body = g_dbus_message_get_body(reply);
+		g_variant_get(body, "(is)", &result, ret_val);
+		if (result == BADGE_ERROR_NONE && ret_val != NULL)
+			*value = strdup(ret_val);
+	}
+	DBG("badge_ipc_setting_property_get done [result: %d]", result);
+	return result;
 }
+
+
