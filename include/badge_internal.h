@@ -214,40 +214,6 @@ int badge_setting_property_set(const char *pkgname, const char *property, const 
  */
 int badge_setting_property_get(const char *pkgname, const char *property, char **value);
 
-/**
- * @internal
- * @brief Called to retrieve the badge existence.
- * @since_tizen 2.4
- * @param[in] app_id The name of the application
- * @param[in] count The count of the badge
- * @param[in] user_data The user data passed from the foreach function
- * @pre badge_foreach_existed() will invoke this callback.
- * @see badge_foreach_existed()
- */
-typedef void (*badge_cb)(const char *app_id, unsigned int count, void *user_data) DEPRECATED;
-
-
-/**
- * @internal
- * @brief Retrieves all existing badges.
- * @since_tizen 2.4
- * @privlevel public
- * @privilege %http://tizen.org/privilege/notification
- * @param[in] callback The callback function
- * @param[in] user_data The user data to be passed to the callback function
- * @return #BADGE_ERROR_NONE if success, other value if failure
- * @retval BADGE_ERROR_NONE Success
- * @retval BADGE_ERROR_INVALID_PARAMETER Invalid parameter
- * @retval BADGE_ERROR_PERMISSION_DENIED The application does not have the privilege to call this method
- * @retval BADGE_ERROR_FROM_DB Error form DB
- * @retval BADGE_ERROR_OUT_OF_MEMORY Out of memory
- * @retval BADGE_ERROR_NOT_EXIST Not exist
- * @see #badge_error_e
- * @see badge_get_count()
- * @see badge_is_existing()
- */
-int badge_foreach_existed(badge_cb callback, void *user_data) DEPRECATED;
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
