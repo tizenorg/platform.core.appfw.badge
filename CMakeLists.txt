@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(badge C)
 
 SET(EXEC_PREFIX "\${prefix}")
+SET(PREFIX ${CMAKE_INSTALL_PREFIX})
 SET(PROJECT_NAME "${PROJECT_NAME}")
 SET(LIBDIR ${LIB_INSTALL_DIR})
 SET(INCLUDEDIR "\${prefix}/include/${PROJECT_NAME}")
@@ -14,15 +15,13 @@ SET(INSTALL_HEADERS_DEVEL
 	badge.h
 	badge_error.h
 	badge_internal.h
-)
-
-SET(INSTALL_HEADERS_SERVICE_DEVEL
 	badge_setting_service.h
 	badge_db.h
 )
 
 SET(SRCS
 	src/badge.c
+	src/badge_error.c
 	src/badge_setting.c
 	src/badge_db.c
 	src/badge_ipc.c
@@ -42,7 +41,6 @@ pkg_check_modules(pkgs REQUIRED
 	dbus-1
 	dbus-glib-1
 	vconf
-	com-core
 	capi-appfw-package-manager
 	db-util
 	libtzplatform-config
@@ -71,14 +69,7 @@ CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc @ONLY)
 SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_NAME}.pc")
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
-CONFIGURE_FILE("${PROJECT_NAME}-service.pc.in" "${PROJECT_NAME}-service.pc" @ONLY)
-SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${PROJECT_NAME}-service.pc")
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-service.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-
 FOREACH(hfile ${INSTALL_HEADERS_DEVEL})
 	INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/${hfile} DESTINATION include/${PROJECT_NAME})
 ENDFOREACH(hfile)
 
-FOREACH(hfile ${INSTALL_HEADERS_SERVICE_DEVEL})
-	INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/${hfile} DESTINATION include/${PROJECT_NAME}/service)
-ENDFOREACH(hfile)
