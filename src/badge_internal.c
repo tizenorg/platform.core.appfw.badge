@@ -753,6 +753,7 @@ int _badget_set_display(const char *pkgname,
 			result = ret;
 			goto return_close_db;
 		}
+
 	} else if (ret == BADGE_ERROR_NOT_EXIST) {
 		sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 				"(pkgname, " \
@@ -863,6 +864,7 @@ return_close_db:
 void badge_changed_cb_call(unsigned int action, const char *pkgname,
 			unsigned int count)
 {
+	DBG("call badge_change_cb");
 	GList *list = g_badge_cb_list;
 	struct _badge_cb_data *bd = NULL;
 
@@ -871,16 +873,19 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
 		if (!bd)
 			continue;
 
-		if (bd->callback)
+		if (bd->callback) {
+			DBG("call badge_change_cb : action %d, pkgname %s, count %d",
+					action, pkgname, count);
 			bd->callback(action, pkgname, count, bd->data);
+		}
 
 		list = g_list_next(list);
 	}
 }
 
-static void _badge_changed_monitor_init()
+static int _badge_changed_monitor_init()
 {
-	badge_ipc_monitor_init();
+	return badge_ipc_monitor_init();
 }
 
 static void _badge_chanaged_monitor_fini()
@@ -906,11 +911,16 @@ int _badge_register_changed_cb(badge_change_cb callback, void *data)
 {
 	struct _badge_cb_data *bd = NULL;
 	GList *found = NULL;
+	int ret;
 
 	if (!callback)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	_badge_changed_monitor_init();
+	ret = _badge_changed_monitor_init();
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("badge_ipc_monitor_init err : %d", ret);
+		return ret;
+	}
 
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
 			_badge_data_compare);
