@@ -25,6 +25,7 @@
 #define __BADGE_ERROR_DEF_H__
 
 #include <tizen.h>
+#include <glib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,9 @@ typedef enum _badge_error_e {
 	BADGE_ERROR_SERVICE_NOT_READY = TIZEN_ERROR_BADGE | 0x05,	/**< Error service not ready */
 	BADGE_ERROR_INVALID_PACKAGE = TIZEN_ERROR_BADGE | 0x06,	/**< The caller application is not signed with the certificate of the badge owner*/
 } badge_error_e;
+
+#define BADGE_ERROR (badge_error_quark ())
+GQuark badge_error_quark(void);
 
 /**
  * @}
