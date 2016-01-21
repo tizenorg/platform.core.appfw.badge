@@ -171,6 +171,8 @@ int badge_set_count(const char *app_id, unsigned int count)
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
+	DBG("app_id %s, count %d", app_id, count);
+
 	result = _badge_is_existing(app_id, &existing);
 
 	if (result != BADGE_ERROR_NONE) {

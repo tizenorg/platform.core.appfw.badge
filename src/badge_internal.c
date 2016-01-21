@@ -863,6 +863,7 @@ return_close_db:
 void badge_changed_cb_call(unsigned int action, const char *pkgname,
 			unsigned int count)
 {
+	DBG("call badge_change_cb");
 	GList *list = g_badge_cb_list;
 	struct _badge_cb_data *bd = NULL;
 
@@ -871,8 +872,11 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
 		if (!bd)
 			continue;
 
-		if (bd->callback)
+		if (bd->callback) {
+			DBG("call badge_change_cb : action %d, pkgname %s, count %d",
+					action, pkgname, count);
 			bd->callback(action, pkgname, count, bd->data);
+		}
 
 		list = g_list_next(list);
 	}
