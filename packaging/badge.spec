@@ -10,7 +10,6 @@ BuildRequires: pkgconfig(dbus-1)
 BuildRequires: pkgconfig(dbus-glib-1)
 BuildRequires: pkgconfig(dlog)
 BuildRequires: pkgconfig(vconf)
-BuildRequires: pkgconfig(com-core)
 BuildRequires: pkgconfig(capi-appfw-package-manager)
 BuildRequires: pkgconfig(db-util)
 BuildRequires: pkgconfig(libtzplatform-config)
@@ -99,16 +98,15 @@ chmod 644 %{TZ_SYS_DB}/.%{name}.db-journal
 %defattr(-,root,root,-)
 %{_libdir}/libbadge.so*
 %{_datarootdir}/license/%{name}
+%{_includedir}/badge/badge.h
+%{_includedir}/badge/badge_error.h
+%{_includedir}/badge/badge_internal.h
 
 %files devel
 %defattr(-,root,root,-)
 %{_includedir}/badge/badge.h
 %{_includedir}/badge/badge_error.h
 %{_includedir}/badge/badge_internal.h
+%{_includedir}/badge/badge_db.h
+%{_includedir}/badge/badge_setting_service.h
 %{_libdir}/pkgconfig/%{name}.pc
-
-%files service-devel
-%defattr(-,root,root,-)
-%{_includedir}/badge/service/badge_db.h
-%{_includedir}/badge/service/badge_setting_service.h
-%{_libdir}/pkgconfig/badge-service.pc
