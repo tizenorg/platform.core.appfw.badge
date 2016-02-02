@@ -735,6 +735,12 @@ int _badget_set_display(const char *pkgname,
 		return BADGE_ERROR_FROM_DB;
 	}
 
+	ret = _badge_check_data_inserted(pkgname, db);
+	if (ret != BADGE_ERROR_ALREADY_EXIST) {
+		result = ret;
+		goto return_close_db;
+	}
+
 	ret = _badge_check_option_inserted(pkgname, db);
 	if (ret == BADGE_ERROR_ALREADY_EXIST) {
 		sqlbuf = sqlite3_mprintf("UPDATE %q SET display = %d " \
