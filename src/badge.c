@@ -114,19 +114,6 @@ int badge_remove(const char *app_id)
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -166,19 +153,6 @@ int badge_set_count(const char *app_id, unsigned int count)
 
 	DBG("app_id %s, count %d", app_id, count);
 
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -211,19 +185,6 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
