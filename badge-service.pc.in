@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=@EXEC_PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@/service
+
+Name: badge
+Description: Badge supporting library
+Version: @VERSION@
+Requires:
+Libs: -L${libdir} -lbadge
+Cflags: -I${includedir}

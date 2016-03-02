@@ -80,7 +80,7 @@ int badge_db_delete(const char *pkgname, const char *caller)
 }
 
 EXPORT_API
-int badge_db_set_count(const char *pkgname, const char *caller, unsigned int count)
+int badge_db_set_count(const char *pkgname, const char *caller, int count)
 {
 	int result = BADGE_ERROR_NONE;
 
@@ -90,31 +90,11 @@ int badge_db_set_count(const char *pkgname, const char *caller, unsigned int cou
 }
 
 EXPORT_API
-int badge_db_get_count(const char *pkgname, unsigned int *count)
-{
-	int result = BADGE_ERROR_NONE;
-
-	result = _badget_get_count(pkgname, count);
-
-	return result;
-}
-
-EXPORT_API
-int badge_db_set_display_option(const char *pkgname, const char *caller, unsigned int is_display)
+int badge_db_set_display_option(const char *pkgname, const char *caller, int is_display)
 {
 	int result = BADGE_ERROR_NONE;
 
 	result = _badget_set_display(pkgname, is_display);
-
-	return result;
-}
-
-EXPORT_API
-int badge_db_get_display_option(const char *pkgname, unsigned int *is_display)
-{
-	int result = BADGE_ERROR_NONE;
-
-	result = _badget_get_display(pkgname, is_display);
 
 	return result;
 }

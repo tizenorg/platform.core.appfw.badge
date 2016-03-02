@@ -34,10 +34,8 @@ extern "C" {
 
 int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller);
 int badge_db_delete(const char *pkgname, const char *caller_pkg);
-int badge_db_set_count(const char *pkgname, const char *caller_pkg, unsigned int count);
-int badge_db_get_count(const char *pkgname, unsigned int *count);
-int badge_db_set_display_option(const char *pkgname, const char *caller_pkg, unsigned int is_display);
-int badge_db_get_display_option(const char *pkgname, unsigned int *is_display);
+int badge_db_set_count(const char *pkgname, const char *caller_pkg, int count);
+int badge_db_set_display_option(const char *pkgname, const char *caller_pkg, int is_display);
 int badge_db_exec(sqlite3 * db, const char *query, int *num_changes);
 
 #ifdef __cplusplus

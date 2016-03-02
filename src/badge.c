@@ -114,19 +114,6 @@ int badge_remove(const char *app_id)
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
-
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
 		ERR("fail to get caller pkgname");
@@ -148,6 +135,13 @@ int badge_is_existing(const char *app_id, bool *existing)
 	return _badge_is_existing(app_id, existing);
 }
 
+
+EXPORT_API
+int badge_foreach_existed(badge_cb callback, void *data)
+{
+	return _badge_foreach_existed((badge_foreach_cb)callback, data);
+}
+
 EXPORT_API
 int badge_foreach(badge_foreach_cb callback, void *user_data)
 {
@@ -163,21 +157,6 @@ int badge_set_count(const char *app_id, unsigned int count)
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-
-	DBG("app_id %s, count %d", app_id, count);
-
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
@@ -196,10 +175,7 @@ out:
 EXPORT_API
 int badge_get_count(const char *app_id, unsigned int *count)
 {
-	if (app_id == NULL || count == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	return badge_ipc_request_get_count(app_id, count);
+	return _badget_get_count(app_id, count);
 }
 
 EXPORT_API
@@ -211,19 +187,6 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
-
-	result = _badge_is_existing(app_id, &existing);
-
-	if (result != BADGE_ERROR_NONE) {
-		ERR("_badge_is_existing failed [%x]", result);
-		goto out;
-	}
-
-	if (existing == false) {
-		ERR("app_id is not exist [%s]", app_id);
-		result = BADGE_ERROR_NOT_EXIST;
-		goto out;
-	}
 
 	caller = _badge_get_pkgname_by_pid();
 	if (!caller) {
@@ -243,10 +206,7 @@ out:
 EXPORT_API
 int badge_get_display(const char *app_id, unsigned int *is_display)
 {
-	if (app_id == NULL || is_display == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	return badge_ipc_request_get_display(app_id, is_display);
+	return _badget_get_display(app_id, is_display);
 }
 
 EXPORT_API
