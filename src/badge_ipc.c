@@ -344,11 +344,14 @@ static int _send_sync_badge(GVariant *body, GDBusMessage **reply, char *cmd)
 	g_object_unref(msg);
 
 	if (!*reply) {
+		ret = BADGE_ERROR_SERVICE_NOT_READY;
 		if (err != NULL) {
-			ERR("No reply. cmd = %s, error = %s", cmd, err->message);
+			ErrPrint("No reply. cmd = %s,  error = %s", cmd, err->message);
+			if (err->code == G_DBUS_ERROR_ACCESS_DENIED)
+				ret = BADGE_ERROR_PERMISSION_DENIED;
 			g_error_free(err);
 		}
-		return BADGE_ERROR_SERVICE_NOT_READY;
+		return ret;
 	}
 
 	if (g_dbus_message_to_gerror(*reply, &err)) {
