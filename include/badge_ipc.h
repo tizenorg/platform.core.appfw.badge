@@ -39,7 +39,9 @@ int badge_ipc_monitor_fini(void);
 int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller);
 int badge_ipc_request_delete(const char *pkgname, const char *caller);
 int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count);
-int badge_ipc_request_set_display(const char *pkgname, const char *caller, int display_option);
+int badge_ipc_request_get_count(const char *pkgname, unsigned int *count);
+int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsigned int display_option);
+int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display);
 
 int badge_ipc_is_master_ready(void);
 int badge_ipc_add_deferred_task(void (*badge_add_deferred_task)(void *data), void *user_data);
