@@ -312,7 +312,6 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
-	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
 
 	if (!pkgname || !existing) {
@@ -329,18 +328,19 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	}
 
 	result = _badge_check_data_inserted(pkgname, db);
-	if (result == BADGE_ERROR_ALREADY_EXIST)
+	if (result == BADGE_ERROR_ALREADY_EXIST) {
 		*existing = TRUE;
-	else if (result == BADGE_ERROR_NOT_EXIST)
+		result = BADGE_ERROR_NONE;
+	} else if (result == BADGE_ERROR_NOT_EXIST) {
 		*existing = FALSE;
-	else
-		ret = result;
+		result = BADGE_ERROR_NONE;
+	}
 
 	sqlret = db_util_close(db);
 	if (sqlret != SQLITE_OK)
 		WARN("fail to db_util_close - [%d]", sqlret);
 
-	return BADGE_ERROR_NONE;
+	return result;
 }
 
 int _badge_foreach_existed(badge_foreach_cb callback, void *data)

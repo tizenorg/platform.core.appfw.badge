@@ -109,7 +109,6 @@ int badge_remove(const char *app_id)
 {
 	char *caller = NULL;
 	int result = BADGE_ERROR_NONE;
-	bool existing = false;
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -146,7 +145,6 @@ int badge_set_count(const char *app_id, unsigned int count)
 {
 	char *caller = NULL;
 	int result = BADGE_ERROR_NONE;
-	bool existing = false;
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
@@ -181,7 +179,6 @@ int badge_set_display(const char *app_id, unsigned int is_display)
 {
 	char *caller = NULL;
 	int result = BADGE_ERROR_NONE;
-	bool existing = false;
 
 	if (app_id == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
