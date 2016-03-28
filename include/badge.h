@@ -77,7 +77,7 @@ int badge_new(const char *writable_app_id);
 /**
  * @brief Creates a badge for the application specified by the badge_app_id.
  * @remarks Creating and updating a badge of the other application is allowed only when both applications are signed with the same certificate.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_app_id The id of the application for which the badge will be created. This parameter can be null when creating a badge for itself.
@@ -285,7 +285,7 @@ typedef bool (*badge_foreach_cb)(const char *app_id, unsigned int count, void *u
 
 /**
  * @brief Retrieves all existing badges.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -328,7 +328,7 @@ typedef void (*badge_change_cb)(unsigned int action, const char *app_id,
 			unsigned int count, void *user_data);
 /**
  * @brief Registers a callback function to receive badge change event.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -347,7 +347,7 @@ int badge_register_changed_cb(badge_change_cb callback, void *user_data);
 
 /**
  * @brief Unregisters a callback function to receive badge change event.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
