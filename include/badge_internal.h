@@ -51,7 +51,7 @@ typedef struct _badge_h badge_h;
 /**
  * @internal
  * @brief This function checks whether badge service is ready
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @remarks The specific error code can be obtained using the get_last_result() method. Error codes are described in Exception section.
@@ -64,7 +64,7 @@ int badge_is_service_ready(void);
 /**
  * @internal
  * @brief This function adds deferred task. the registered task will be executed when badge service become ready
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_add_deferred_task The callback function
@@ -82,7 +82,7 @@ int badge_add_deferred_task(
 /**
  * @internal
  * @brief This function removes deferred task.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_add_deferred_task The callback function
@@ -99,7 +99,7 @@ int badge_del_deferred_task(
 /**
  * @internal
  * @brief Tests if the badge for the designated application exists or not.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -172,7 +172,7 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
 /**
  * @internal
  * @brief Creates a badge for the designated package.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @details Creates new badge to display.
