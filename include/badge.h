@@ -41,9 +41,9 @@ extern "C" {
  */
 
 /**
- * @deprecated Deprecated since 2.4 Use badge_add instead.
+ * @deprecated Deprecated since @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif Use badge_add instead.
  * @brief Creates a badge for the application itself.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @details Creates new badge to display.
@@ -77,7 +77,7 @@ int badge_new(const char *writable_app_id);
 /**
  * @brief Creates a badge for the application specified by the badge_app_id.
  * @remarks Creating and updating a badge of the other application is allowed only when both applications are signed with the same certificate.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] badge_app_id The id of the application for which the badge will be created. This parameter can be null when creating a badge for itself.
@@ -107,7 +107,7 @@ int badge_add(const char *badge_app_id);
 
 /**
  * @brief Removes the badge for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -137,7 +137,7 @@ int badge_remove(const char *app_id);
 
 /**
  * @brief Sets badge count for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -169,7 +169,7 @@ int badge_set_count(const char *app_id, unsigned int count);
 
 /**
  * @brief Gets badge count for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -204,7 +204,7 @@ int badge_get_count(const char *app_id, unsigned int *count);
 
 /**
  * @brief Sets the display option for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -236,7 +236,7 @@ int badge_set_display(const char *app_id, unsigned int is_display);
 
 /**
  * @brief Gets the display option for the designated application.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] app_id The name of the designated application
@@ -272,7 +272,7 @@ int badge_get_display(const char *app_id, unsigned int *is_display);
 
 /**
  * @brief Callback function for getting result of badge_foreach.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @param[in] app_id The id of the application
  * @param[in] count The count of the badge
  * @param[in] user_data The user data passed from the badge_foreach function
@@ -285,7 +285,7 @@ typedef bool (*badge_foreach_cb)(const char *app_id, unsigned int count, void *u
 
 /**
  * @brief Retrieves all existing badges.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -304,7 +304,7 @@ int badge_foreach(badge_foreach_cb callback, void *user_data);
 
 /**
  * @brief Enumeration for Badge Action.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  */
 enum badge_action {
 	BADGE_ACTION_CREATE = 0,	/**< Badge created */
@@ -316,7 +316,7 @@ enum badge_action {
 
 /**
  * @brief Called when the badge information is changed.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @param[in] action The type of the change. Refer #badge_action
  * @param[in] app_id The name of the application
  * @param[in] count The count of the badge
@@ -328,7 +328,7 @@ typedef void (*badge_change_cb)(unsigned int action, const char *app_id,
 			unsigned int count, void *user_data);
 /**
  * @brief Registers a callback function to receive badge change event.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
@@ -347,7 +347,7 @@ int badge_register_changed_cb(badge_change_cb callback, void *user_data);
 
 /**
  * @brief Unregisters a callback function to receive badge change event.
- * @since_tizen 2.4
+ * @since_tizen @if MOBILE 2.4 @elseif WEARABLE 3.0 @endif
  * @privlevel public
  * @privilege %http://tizen.org/privilege/notification
  * @param[in] callback The callback function
