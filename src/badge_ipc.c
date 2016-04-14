@@ -98,7 +98,7 @@ int badge_ipc_is_master_ready(void)
 		}
 	}
 
-	if(result)
+	if (result)
 		g_variant_unref(result);
 
 	return is_master_started;
@@ -374,8 +374,8 @@ static int _send_service_register()
 
 	result = _send_sync_badge(NULL, &reply, "badge_service_register");
 
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("_send_service_register dones");
 	return result;
@@ -486,8 +486,8 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 
 	result = _send_sync_badge(body, &reply, "insert_badge");
 
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_request_insert done [result: %d]", result);
 	return result;
@@ -508,8 +508,8 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller)
 
 	result = _send_sync_badge(body, &reply, "delete_badge");
 
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_request_delete done [result: %d]", result);
 	return result;
@@ -530,7 +530,7 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 
 	result = _send_sync_badge(body, &reply, "set_badge_count");
 
-	if(reply)
+	if (reply)
 	    g_object_unref(reply);
 
 	DBG("badge_ipc_request_set_count done [result: %d]", result);
@@ -559,8 +559,8 @@ int badge_ipc_request_get_count(const char *pkgname, unsigned int *count)
 		*count = ret_count;
 	}
 
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_request_get_count done [result: %d]", result);
 	return result;
@@ -580,8 +580,8 @@ int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsig
 	body = g_variant_new("(ssi)", pkgname, caller, display_option);
 
 	result = _send_sync_badge(body, &reply, "set_disp_option");
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_request_set_display done [result: %d]", result);
 	return result;
@@ -609,8 +609,8 @@ int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display)
 		*is_display = ret_is_display;
 	}
 
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_request_get_display done [result: %d]", result);
 	return result;
@@ -630,8 +630,8 @@ int badge_ipc_setting_property_set(const char *pkgname, const char *property, co
 	body = g_variant_new("(sss)", pkgname, property, value);
 
 	result = _send_sync_badge(body, &reply, "set_noti_property");
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_setting_property_set done [result: %d]", result);
 	return result;
@@ -662,8 +662,8 @@ int badge_ipc_setting_property_get(const char *pkgname, const char *property, ch
 		else
 			result = BADGE_ERROR_IO_ERROR;
 	}
-	if(reply)
-        g_object_unref(reply);
+	if (reply)
+		g_object_unref(reply);
 
 	DBG("badge_ipc_setting_property_get done [result: %d]", result);
 	return result;
