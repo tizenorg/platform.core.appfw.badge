@@ -922,12 +922,6 @@ int _badge_register_changed_cb(badge_change_cb callback, void *data)
 	if (!callback)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	ret = _badge_changed_monitor_init();
-	if (ret != BADGE_ERROR_NONE) {
-		ERR("badge_ipc_monitor_init err : %d", ret);
-		return ret;
-	}
-
 	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
 			_badge_data_compare);
 
@@ -945,6 +939,13 @@ int _badge_register_changed_cb(badge_change_cb callback, void *data)
 		bd->data = data;
 
 		g_badge_cb_list = g_list_append(g_badge_cb_list, bd);
+	}
+
+	ret = _badge_changed_monitor_init();
+	if (ret != BADGE_ERROR_NONE) {
+		ERR("badge_ipc_monitor_init err : %d", ret);
+		_badge_unregister_changed_cb(callback);
+		return ret;
 	}
 	return BADGE_ERROR_NONE;
 }

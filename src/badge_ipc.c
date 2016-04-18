@@ -377,6 +377,7 @@ static int _send_service_register()
 	if (reply)
 		g_object_unref(reply);
 
+	badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0);
 	DBG("_send_service_register dones");
 	return result;
 }
