@@ -37,7 +37,7 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 	char *pkgs = NULL;
 
 	if (!pkgname) {
-		WARN("package name is NULL");
+		ERR("package name is NULL");
 		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
@@ -120,7 +120,7 @@ int badge_db_get_display_option(const char *pkgname, unsigned int *is_display)
 }
 
 EXPORT_API
-int badge_db_exec(sqlite3 * db, const char *query, int *num_changes)
+int badge_db_exec(sqlite3 *db, const char *query, int *num_changes)
 {
 	int ret = 0;
 	sqlite3_stmt *stmt = NULL;

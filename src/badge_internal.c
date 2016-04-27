@@ -112,8 +112,9 @@ char *_badge_get_pkgname_by_pid(void)
 	if (pkgname[0] == '\0') {
 		free(pkgname);
 		return NULL;
-	} else
+	} else {
 		return pkgname;
+	}
 }
 
 static int _badge_check_data_inserted(const char *pkgname,
