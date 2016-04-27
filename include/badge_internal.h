@@ -38,7 +38,7 @@
 #define DEPRECATED __attribute__((deprecated))
 #endif
 
-#define BADGE_ERROR (badge_error_quark ())
+#define BADGE_ERROR (badge_error_quark())
 GQuark badge_error_quark(void);
 
 #ifdef __cplusplus
