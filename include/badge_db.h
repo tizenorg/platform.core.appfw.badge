@@ -39,6 +39,8 @@ int badge_db_get_count(const char *pkgname, unsigned int *count);
 int badge_db_set_display_option(const char *pkgname, const char *caller_pkg, unsigned int is_display);
 int badge_db_get_display_option(const char *pkgname, unsigned int *is_display);
 int badge_db_exec(sqlite3 *db, const char *query, int *num_changes);
+int badge_db_get_list(GList **badge_list);
+int badge_db_is_existing(const char *pkgname, bool *existing);
 
 #ifdef __cplusplus
 	}
