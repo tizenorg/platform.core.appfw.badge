@@ -30,6 +30,22 @@
 #include "badge_internal.h"
 
 EXPORT_API
+int badge_db_is_existing(const char *pkgname, bool *existing)
+{
+	int result = BADGE_ERROR_NONE;
+	result = _badge_is_existing(pkgname, existing);
+	return result;
+}
+
+EXPORT_API
+int badge_db_get_list(GList **badge_list)
+{
+	int result = BADGE_ERROR_NONE;
+	result = _badge_get_list(badge_list);
+	return result;
+}
+
+EXPORT_API
 int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller)
 {
 	int err = BADGE_ERROR_NONE;

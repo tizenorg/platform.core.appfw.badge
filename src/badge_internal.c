@@ -308,7 +308,6 @@ free_and_return:
 	return result;
 }
 
-
 int _badge_is_existing(const char *pkgname, bool *existing)
 {
 	sqlite3 *db = NULL;
@@ -336,6 +335,83 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 		*existing = FALSE;
 		result = BADGE_ERROR_NONE;
 	}
+
+	sqlret = db_util_close(db);
+	if (sqlret != SQLITE_OK)
+		WARN("fail to db_util_close - [%d]", sqlret);
+
+	return result;
+}
+
+int _badge_get_list(GList **badge_list)
+{
+	sqlite3 *db = NULL;
+	int result = BADGE_ERROR_NONE;
+	char *sqlbuf = NULL;
+	sqlite3_stmt *stmt = NULL;
+	int sqlret;
+	const char *pkg;
+	unsigned int badge_count;
+	badge_info_s *badge_info;
+
+	sqlret = db_util_open(BADGE_DB_PATH, &db, 0);
+	if (sqlret != SQLITE_OK || !db) {
+		ERR("fail to db_util_open - [%d]", sqlret);
+		return BADGE_ERROR_FROM_DB;
+	}
+
+	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q",
+				BADGE_TABLE_NAME);
+	if (!sqlbuf) {
+		ERR("fail to alloc sql query");
+		result = BADGE_ERROR_OUT_OF_MEMORY;
+		goto free_and_return;
+	}
+
+	sqlret = sqlite3_prepare_v2(db, sqlbuf, -1, &stmt, NULL);
+	if (sqlret != SQLITE_OK) {
+		ERR("fail to sqlite3_prepare_v2 - [%s]", sqlite3_errmsg(db));
+		ERR("query[%s]", sqlbuf);
+		result = BADGE_ERROR_FROM_DB;
+		goto free_and_return;
+	}
+
+	sqlret = sqlite3_step(stmt);
+	if (sqlret == SQLITE_DONE) {
+		INFO("badge db has no data");
+		result = BADGE_ERROR_NOT_EXIST;
+		goto free_and_return;
+	} else if (sqlret != SQLITE_ROW) {
+		ERR("fail to sqlite3_step : %d", sqlret);
+		result = BADGE_ERROR_FROM_DB;
+		goto free_and_return;
+	}
+
+	do {
+		pkg = (const char *)sqlite3_column_text(stmt, 0);
+		badge_count = (unsigned int)sqlite3_column_int(stmt, 1);
+		if (pkg) {
+			badge_info = (badge_info_s *)calloc(sizeof(badge_info_s), 1);
+			if (badge_info == NULL) {
+				ERR("alloc badge_info fail");
+				result = BADGE_ERROR_OUT_OF_MEMORY;
+				break;
+			}
+			badge_info->pkg = strdup(pkg);
+			badge_info->badge_count = badge_count;
+			*badge_list = g_list_append(*badge_list, badge_info);
+		} else {
+			ERR("db has invaild data");
+			result = BADGE_ERROR_FROM_DB;
+		}
+	} while (sqlite3_step(stmt) == SQLITE_ROW);
+
+free_and_return:
+	if (sqlbuf)
+		sqlite3_free(sqlbuf);
+
+	if (stmt)
+		sqlite3_finalize(stmt);
 
 	sqlret = db_util_close(db);
 	if (sqlret != SQLITE_OK)
