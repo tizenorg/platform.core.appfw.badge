@@ -86,8 +86,8 @@ then
 	'
 fi
 
-chown :5000 %{TZ_SYS_DB}/.%{name}.db
-chown :5000 %{TZ_SYS_DB}/.%{name}.db-journal
+chown app_fw:app_fw %{TZ_SYS_DB}/.%{name}.db
+chown app_fw:app_fw %{TZ_SYS_DB}/.%{name}.db-journal
 chmod 644 %{TZ_SYS_DB}/.%{name}.db
 chmod 644 %{TZ_SYS_DB}/.%{name}.db-journal
 
