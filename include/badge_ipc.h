@@ -50,6 +50,9 @@ int badge_ipc_del_deferred_task(void (*badge_add_deferred_task)(void *data));
 int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value);
 int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value);
 
+int badge_ipc_request_get_list(badge_foreach_cb callback, void *data);
+int badge_ipc_request_is_existing(const char *pkgname, bool *existing);
+
 #ifdef __cplusplus
 }
 #endif

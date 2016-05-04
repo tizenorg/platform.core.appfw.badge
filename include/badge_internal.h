@@ -47,6 +47,10 @@ extern "C" {
 
 typedef struct _badge_h badge_h;
 
+typedef struct badge_info {
+	char *pkg;
+	unsigned int badge_count;
+} badge_info_s;
 
 /**
  * @internal
@@ -137,6 +141,8 @@ char *_badge_get_pkgname_by_pid(void);
 int _badge_is_existing(const char *pkgname, bool *existing);
 
 int _badge_foreach_existed(badge_foreach_cb callback, void *data);
+
+int _badge_get_list(GList **badge_list);
 
 int _badge_insert(badge_h *badge);
 
