@@ -131,13 +131,17 @@ out:
 EXPORT_API
 int badge_is_existing(const char *app_id, bool *existing)
 {
-	return _badge_is_existing(app_id, existing);
+	return badge_ipc_request_is_existing(app_id, existing);
 }
 
 EXPORT_API
 int badge_foreach(badge_foreach_cb callback, void *user_data)
 {
-	return _badge_foreach_existed(callback, user_data);
+	int result = BADGE_ERROR_NONE;
+	result = badge_ipc_request_get_list(callback, user_data);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
+	return result;
 }
 
 EXPORT_API
@@ -159,6 +163,8 @@ int badge_set_count(const char *app_id, unsigned int count)
 	}
 
 	result = badge_ipc_request_set_count(app_id, caller, count);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
 out:
 	if (caller)
 		free(caller);
@@ -168,10 +174,15 @@ out:
 EXPORT_API
 int badge_get_count(const char *app_id, unsigned int *count)
 {
+	int result = BADGE_ERROR_NONE;
 	if (app_id == NULL || count == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	return badge_ipc_request_get_count(app_id, count);
+	result = badge_ipc_request_get_count(app_id, count);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
+
+	return result;
 }
 
 EXPORT_API

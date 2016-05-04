@@ -47,6 +47,10 @@ extern "C" {
 
 typedef struct _badge_h badge_h;
 
+typedef struct badge_info {
+	char *pkg;
+	unsigned int badge_count;
+} badge_info_s;
 
 /**
  * @internal
@@ -109,6 +113,7 @@ int badge_del_deferred_task(
  * @retval BADGE_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval BADGE_ERROR_PERMISSION_DENIED The application does not have the privilege to call this method
  * @retval BADGE_ERROR_FROM_DB Error from DB
+ * @retval BADGE_ERROR_OUT_OF_MEMORY Out of memory
  * @retval BADGE_ERROR_NOT_EXIST Not exist
  * @retval BADGE_ERROR_SERVICE_NOT_READY Service is not ready
  * @see #badge_error_e
@@ -137,6 +142,8 @@ char *_badge_get_pkgname_by_pid(void);
 int _badge_is_existing(const char *pkgname, bool *existing);
 
 int _badge_foreach_existed(badge_foreach_cb callback, void *data);
+
+int _badge_get_list(GList **badge_list);
 
 int _badge_insert(badge_h *badge);
 
