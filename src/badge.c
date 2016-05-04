@@ -131,13 +131,13 @@ out:
 EXPORT_API
 int badge_is_existing(const char *app_id, bool *existing)
 {
-	return _badge_is_existing(app_id, existing);
+	return badge_ipc_request_is_existing(app_id, existing);
 }
 
 EXPORT_API
 int badge_foreach(badge_foreach_cb callback, void *user_data)
 {
-	return _badge_foreach_existed(callback, user_data);
+	return badge_ipc_request_get_list(callback, user_data);
 }
 
 EXPORT_API
