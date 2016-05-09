@@ -41,6 +41,7 @@ int badge_db_get_display_option(const char *pkgname, unsigned int *is_display);
 int badge_db_exec(sqlite3 *db, const char *query, int *num_changes);
 int badge_db_get_list(GList **badge_list);
 int badge_db_is_existing(const char *pkgname, bool *existing);
+int badge_db_init();
 
 #ifdef __cplusplus
 	}

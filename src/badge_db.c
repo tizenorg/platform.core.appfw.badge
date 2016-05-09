@@ -20,14 +20,67 @@
  *
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sqlite3.h>
+#include <tzplatform_config.h>
+#include <db-util.h>
 
 #include "badge.h"
 #include "badge_log.h"
 #include "badge_error.h"
 #include "badge_internal.h"
+
+#define BADGE_DB_NAME ".badge.db"
+#define CREATE_BADGE_TABLE " \
+PRAGMA journal_mode = PERSIST; \
+create table if not exists badge_data ( \
+	pkgname TEXT NOT NULL, \
+	writable_pkgs TEXT, \
+	badge INTEGER default 0, \
+	rowid INTEGER PRIMARY KEY AUTOINCREMENT, \
+	UNIQUE (pkgname) \
+); \
+create table if not exists badge_option ( \
+	pkgname TEXT NOT NULL, \
+	display INTEGER default 1, \
+	UNIQUE (pkgname) \
+); "
+
+EXPORT_API
+int badge_db_init()
+{
+	int r;
+	sqlite3 *db = NULL;
+	char *errmsg = NULL;
+	char defname[FILENAME_MAX];
+	const char *db_path = tzplatform_getenv(TZ_SYS_DB);
+	if (db_path == NULL) {
+		ERR("fail to get db_path");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
+	snprintf(defname, sizeof(defname), "%s/%s", db_path, BADGE_DB_NAME);
+
+	DBG("db path : %s", defname);
+	r = sqlite3_open_v2(defname, &db, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, NULL);
+	if (r) {
+		db_util_close(db);
+		ERR("fail to open notification db %d", r);
+		return BADGE_ERROR_IO_ERROR;
+	}
+
+	r = sqlite3_exec(db, CREATE_BADGE_TABLE, NULL, NULL, &errmsg);
+	if (r != SQLITE_OK) {
+		ERR("query error(%d)(%s)", r, errmsg);
+		sqlite3_free(errmsg);
+		db_util_close(db);
+		return BADGE_ERROR_IO_ERROR;
+	}
+
+	db_util_close(db);
+	return BADGE_ERROR_NONE;
+}
 
 EXPORT_API
 int badge_db_is_existing(const char *pkgname, bool *existing)
