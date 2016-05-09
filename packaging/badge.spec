@@ -68,29 +68,6 @@ then
 	mkdir -p %{TZ_SYS_DB}
 fi
 
-if [ ! -f %{TZ_SYS_DB}/.%{name}.db ]
-then
-	sqlite3 %{TZ_SYS_DB}/.%{name}.db 'PRAGMA journal_mode = PERSIST;
-		create table if not exists badge_data (
-			pkgname TEXT NOT NULL,
-			writable_pkgs TEXT,
-			badge INTEGER default 0,
-			rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-			UNIQUE (pkgname)
-		);
-		create table if not exists badge_option (
-			pkgname TEXT NOT NULL,
-			display INTEGER default 1,
-			UNIQUE (pkgname)
-		);
-	'
-fi
-
-chown app_fw:app_fw %{TZ_SYS_DB}/.%{name}.db
-chown app_fw:app_fw %{TZ_SYS_DB}/.%{name}.db-journal
-chmod 644 %{TZ_SYS_DB}/.%{name}.db
-chmod 644 %{TZ_SYS_DB}/.%{name}.db-journal
-
 %postun -p /sbin/ldconfig
 
 %files
