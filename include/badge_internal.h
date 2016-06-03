@@ -143,21 +143,21 @@ int _badge_is_existing(const char *pkgname, bool *existing);
 
 int _badge_foreach_existed(badge_foreach_cb callback, void *data);
 
-int _badge_get_list(GList **badge_list);
+int _badge_get_list(GList **badge_list, uid_t uid);
 
-int _badge_insert(badge_h *badge);
+int _badge_insert(badge_h *badge, uid_t uid);
 
-int _badge_remove(const char *caller, const char *pkgname);
+int _badge_remove(const char *caller, const char *pkgname, uid_t uid);
 
 int _badget_set_count(const char *caller, const char *pkgname,
-			unsigned int count);
+			unsigned int count, uid_t uid);
 
-int _badget_get_count(const char *pkgname, unsigned int *count);
+int _badget_get_count(const char *pkgname, unsigned int *count, uid_t uid);
 
 int _badget_set_display(const char *pkgname,
-			unsigned int is_display);
+			unsigned int is_display, uid_t uid);
 
-int _badget_get_display(const char *pkgname, unsigned int *is_display);
+int _badget_get_display(const char *pkgname, unsigned int *is_display, uid_t uid);
 
 int _badge_register_changed_cb(badge_change_cb callback, void *data);
 
@@ -175,6 +175,7 @@ char *_badge_pkgs_new_valist(int *err,
 
 void badge_changed_cb_call(unsigned int action, const char *pkgname,
 			unsigned int count);
+uid_t get_online_uid();
 
 /**
  * @internal

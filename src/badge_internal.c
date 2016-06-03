@@ -118,7 +118,7 @@ char *_badge_get_pkgname_by_pid(void)
 }
 
 static int _badge_check_data_inserted(const char *pkgname,
-					sqlite3 *db)
+					sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -133,8 +133,8 @@ static int _badge_check_data_inserted(const char *pkgname,
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
-			 "pkgname = %Q",
-			 BADGE_TABLE_NAME, pkgname);
+			 "pkgname = %Q and uid = %d",
+			 BADGE_TABLE_NAME, pkgname, uid);
 
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
@@ -173,7 +173,7 @@ free_and_return:
 }
 
 static int _badge_check_option_inserted(const char *pkgname,
-					sqlite3 *db)
+					sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -188,8 +188,8 @@ static int _badge_check_option_inserted(const char *pkgname,
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
-			 "pkgname = %Q",
-			 BADGE_OPTION_TABLE_NAME, pkgname);
+			 "pkgname = %Q and uid =%d",
+			 BADGE_OPTION_TABLE_NAME, pkgname, uid);
 
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
@@ -247,7 +247,7 @@ static int _is_same_certinfo(const char *caller, const char *pkgname)
 }
 
 static int _badge_check_writable(const char *caller,
-			const char *pkgname, sqlite3 *db)
+			const char *pkgname, sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -271,7 +271,7 @@ static int _badge_check_writable(const char *caller,
 		return BADGE_ERROR_NONE;
 
 	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %q WHERE " \
-			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
+			 "pkgname = %Q AND uid = %d AND writable_pkgs LIKE '%%%q%%'",
 			 BADGE_TABLE_NAME,
 			 pkgname, caller);
 	if (!sqlbuf) {
@@ -313,6 +313,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	sqlite3 *db = NULL;
 	int sqlret;
 	int result = BADGE_ERROR_NONE;
+	uid_t uid = get_online_uid();
 
 	if (!pkgname || !existing) {
 		ERR("pkgname : %s, existing : %p", pkgname, existing);
@@ -327,7 +328,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	result = _badge_check_data_inserted(pkgname, db);
+	result = _badge_check_data_inserted(pkgname, db, uid);
 	if (result == BADGE_ERROR_ALREADY_EXIST) {
 		*existing = TRUE;
 		result = BADGE_ERROR_NONE;
@@ -343,7 +344,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	return result;
 }
 
-int _badge_get_list(GList **badge_list)
+int _badge_get_list(GList **badge_list, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int result = BADGE_ERROR_NONE;
@@ -360,8 +361,8 @@ int _badge_get_list(GList **badge_list)
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q",
-				BADGE_TABLE_NAME);
+	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q where uid = %d",
+				BADGE_TABLE_NAME, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -498,7 +499,8 @@ free_and_return:
 	return result;
 }
 
-int _badge_insert(badge_h *badge)
+
+int _badge_insert(badge_h *badge, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
@@ -516,7 +518,7 @@ int _badge_insert(badge_h *badge)
 	}
 
 	/* Check pkgname & id */
-	ret = _badge_check_data_inserted(badge->pkgname, db);
+	ret = _badge_check_data_inserted(badge->pkgname, db, uid);
 	if (ret != BADGE_ERROR_NOT_EXIST) {
 		result = ret;
 		goto return_close_db;
@@ -524,11 +526,11 @@ int _badge_insert(badge_h *badge)
 
 	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 			"(pkgname, " \
-			"writable_pkgs) " \
+			"writable_pkgs, uid) " \
 			"VALUES "
-			"(%Q, %Q);",
+			"(%Q, %Q, %d);",
 			 BADGE_TABLE_NAME,
-			 badge->pkgname, badge->writable_pkgs);
+			 badge->pkgname, badge->writable_pkgs, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -544,18 +546,18 @@ int _badge_insert(badge_h *badge)
 	}
 
 	/* inserting badge options */
-	ret = _badge_check_option_inserted(badge->pkgname, db);
+	ret = _badge_check_option_inserted(badge->pkgname, db, uid);
 	if (ret != BADGE_ERROR_NOT_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
-			"(pkgname) " \
+			"(pkgname, uid) " \
 			"VALUES "
-			"(%Q);",
+			"(%Q, %d);",
 			BADGE_OPTION_TABLE_NAME,
-			 badge->pkgname);
+			 badge->pkgname, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -581,7 +583,7 @@ return_close_db:
 	return result;
 }
 
-int _badge_remove(const char *caller, const char *pkgname)
+int _badge_remove(const char *caller, const char *pkgname, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -601,13 +603,13 @@ int _badge_remove(const char *caller, const char *pkgname)
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_writable(caller, pkgname, db);
+	ret = _badge_check_writable(caller, pkgname, db, uid);
 	if (ret != BADGE_ERROR_NONE) {
 		result = ret;
 		goto return_close_db;
@@ -630,7 +632,7 @@ int _badge_remove(const char *caller, const char *pkgname)
 	}
 
 	/* treating option table */
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
@@ -664,7 +666,7 @@ return_close_db:
 }
 
 int _badget_set_count(const char *caller, const char *pkgname,
-			unsigned int count)
+			unsigned int count, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -684,21 +686,21 @@ int _badget_set_count(const char *caller, const char *pkgname,
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_writable(caller, pkgname, db);
+	ret = _badge_check_writable(caller, pkgname, db, uid);
 	if (ret != BADGE_ERROR_NONE) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("UPDATE %q SET badge = %d " \
-			"WHERE pkgname = %Q",
-			 BADGE_TABLE_NAME, count, pkgname);
+			"WHERE pkgname = %Q and uid = %d",
+			 BADGE_TABLE_NAME, count, pkgname, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -724,7 +726,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_get_count(const char *pkgname, unsigned int *count)
+int _badget_get_count(const char *pkgname, unsigned int *count, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -748,15 +750,15 @@ int _badget_get_count(const char *pkgname, unsigned int *count)
 			return BADGE_ERROR_FROM_DB;
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("SELECT badge FROM %q " \
-			"WHERE pkgname = %Q",
-			 BADGE_TABLE_NAME, pkgname);
+			"WHERE pkgname = %Q and uid = %d",
+			 BADGE_TABLE_NAME, pkgname, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -792,7 +794,7 @@ return_close_db:
 }
 
 int _badget_set_display(const char *pkgname,
-			unsigned int is_display)
+			unsigned int is_display, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -812,17 +814,17 @@ int _badget_set_display(const char *pkgname,
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret == BADGE_ERROR_ALREADY_EXIST) {
 		sqlbuf = sqlite3_mprintf("UPDATE %q SET display = %d " \
-				"WHERE pkgname = %Q",
-				BADGE_OPTION_TABLE_NAME, is_display, pkgname);
+				"WHERE pkgname = %Q AND uid = %d",
+				BADGE_OPTION_TABLE_NAME, is_display, pkgname, uid);
 		if (!sqlbuf) {
 			ERR("fail to alloc query");
 			result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -840,11 +842,11 @@ int _badget_set_display(const char *pkgname,
 	} else if (ret == BADGE_ERROR_NOT_EXIST) {
 		sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 				"(pkgname, " \
-				"display) " \
+				"display, uid) " \
 				"VALUES "
-				"(%Q, %d);",
+				"(%Q, %d, %d);",
 				BADGE_OPTION_TABLE_NAME,
-				pkgname, is_display);
+				pkgname, is_display, uid);
 		if (!sqlbuf) {
 			ERR("fail to alloc query");
 			result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -874,7 +876,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_get_display(const char *pkgname, unsigned int *is_display)
+int _badget_get_display(const char *pkgname, unsigned int *is_display, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -898,7 +900,7 @@ int _badget_get_display(const char *pkgname, unsigned int *is_display)
 			return BADGE_ERROR_FROM_DB;
 	}
 
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		if (ret == BADGE_ERROR_NOT_EXIST)
 			*is_display = 1;
@@ -1264,5 +1266,56 @@ char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 	free(caller_pkgname);
 
 	return result;
+}
+
+
+uid_t get_online_uid()
+{
+	uid_t *uids;
+	int ret, i;
+	char *state = NULL;
+	uid_t ret_uid = -1;
+
+
+	ret = sd_get_uids(&uids);
+	if (ret <= 0) {
+		return -1;
+	}
+
+	for (i = 0; i < ret ; i++) {
+		if (sd_uid_get_state(uids[i], &state) < 0) {
+			break;
+		} else {
+			if (!strncmp(state, "online", 6)) {
+				ret_uid = uids[i];
+				break;
+			}
+		}
+		free(state);
+		state = NULL;
+	}
+
+	if (ret_uid == -1) {
+		for (i = 0; i < ret ; i++) {
+			if (sd_uid_get_state(uids[i], &state) < 0) {
+				break;
+			} else {
+				if (!strncmp(state, "opening", 7) ) {
+					ret_uid = uids[i];
+					WARN("%d : opening", ret_uid);
+					break;
+				}
+			}
+			free(state);
+			state = NULL;
+		}
+
+	}
+
+	if (uids)
+		free(uids);
+	if (state)
+		free(state);
+	return ret_uid;
 }
 

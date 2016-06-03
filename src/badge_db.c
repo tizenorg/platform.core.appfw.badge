@@ -40,12 +40,14 @@ create table if not exists badge_data ( \
 	writable_pkgs TEXT, \
 	badge INTEGER default 0, \
 	rowid INTEGER PRIMARY KEY AUTOINCREMENT, \
-	UNIQUE (pkgname) \
+	uid INTEGER, \
+	UNIQUE (pkgname, uid) \
 ); \
 create table if not exists badge_option ( \
 	pkgname TEXT NOT NULL, \
 	display INTEGER default 1, \
-	UNIQUE (pkgname) \
+	uid INTEGER, \
+	UNIQUE (pkgname, uid) \
 ); "
 
 EXPORT_API
@@ -91,15 +93,15 @@ int badge_db_is_existing(const char *pkgname, bool *existing)
 }
 
 EXPORT_API
-int badge_db_get_list(GList **badge_list)
+int badge_db_get_list(GList **badge_list, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
-	result = _badge_get_list(badge_list);
+	result = _badge_get_list(badge_list, uid);
 	return result;
 }
 
 EXPORT_API
-int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller)
+int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller, uid_t uid)
 {
 	int err = BADGE_ERROR_NONE;
 	badge_h *badge = NULL;
@@ -126,7 +128,7 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 	}
 	free(pkgs);
 
-	err = _badge_insert(badge);
+	err = _badge_insert(badge, uid);
 	if (err != BADGE_ERROR_NONE) {
 		ERR("fail to _badge_insert : %d", err);
 		_badge_free(badge);
@@ -139,51 +141,51 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 }
 
 EXPORT_API
-int badge_db_delete(const char *pkgname, const char *caller)
+int badge_db_delete(const char *pkgname, const char *caller, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_remove(caller, pkgname);
+	result = _badge_remove(caller, pkgname, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_set_count(const char *pkgname, const char *caller, unsigned int count)
+int badge_db_set_count(const char *pkgname, const char *caller, unsigned int count, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_set_count(caller, pkgname, count);
+	result = _badget_set_count(caller, pkgname, count, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_get_count(const char *pkgname, unsigned int *count)
+int badge_db_get_count(const char *pkgname, unsigned int *count, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_get_count(pkgname, count);
+	result = _badget_get_count(pkgname, count, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_set_display_option(const char *pkgname, const char *caller, unsigned int is_display)
+int badge_db_set_display_option(const char *pkgname, const char *caller, unsigned int is_display, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_set_display(pkgname, is_display);
+	result = _badget_set_display(pkgname, is_display, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_get_display_option(const char *pkgname, unsigned int *is_display)
+int badge_db_get_display_option(const char *pkgname, unsigned int *is_display, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_get_display(pkgname, is_display);
+	result = _badget_get_display(pkgname, is_display, uid);
 
 	return result;
 }
