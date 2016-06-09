@@ -420,6 +420,7 @@ free_and_return:
 	return result;
 }
 
+/* LCOV_EXCL_START */
 int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 {
 	sqlite3 *db = NULL;
@@ -497,6 +498,7 @@ free_and_return:
 
 	return result;
 }
+/* LCOV_EXCL_STOP */
 
 int _badge_insert(badge_h *badge)
 {
@@ -1186,6 +1188,7 @@ char *_badge_pkgs_new(int *err, const char *pkg1, ...)
 	return result;
 }
 
+/* LCOV_EXCL_START */
 char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 {
 	char *caller_pkgname = NULL;
@@ -1265,4 +1268,4 @@ char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 
 	return result;
 }
-
+/* LCOV_EXCL_STOP */
