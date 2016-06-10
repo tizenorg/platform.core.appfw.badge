@@ -372,7 +372,7 @@ static int _send_service_register()
 	GDBusMessage *reply = NULL;
 	int result;
 
-	result = _send_sync_badge(NULL, &reply, "badge_service_register");
+	result = _send_sync_badge(g_variant_new("(i)", getuid()), &reply, "badge_service_register");
 
 	if (reply)
 		g_object_unref(reply);
