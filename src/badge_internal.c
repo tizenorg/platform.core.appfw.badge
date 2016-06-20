@@ -665,7 +665,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_set_count(const char *caller, const char *pkgname,
+int _badge_set_count(const char *caller, const char *pkgname,
 			unsigned int count)
 {
 	int ret = BADGE_ERROR_NONE;
@@ -726,7 +726,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_get_count(const char *pkgname, unsigned int *count)
+int _badge_get_count(const char *pkgname, unsigned int *count)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -793,7 +793,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_set_display(const char *pkgname,
+int _badge_set_display(const char *pkgname,
 			unsigned int is_display)
 {
 	int ret = BADGE_ERROR_NONE;
@@ -876,7 +876,7 @@ return_close_db:
 	return result;
 }
 
-int _badget_get_display(const char *pkgname, unsigned int *is_display)
+int _badge_get_display(const char *pkgname, unsigned int *is_display)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;

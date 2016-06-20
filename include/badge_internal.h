@@ -149,15 +149,15 @@ int _badge_insert(badge_h *badge);
 
 int _badge_remove(const char *caller, const char *pkgname);
 
-int _badget_set_count(const char *caller, const char *pkgname,
+int _badge_set_count(const char *caller, const char *pkgname,
 			unsigned int count);
 
-int _badget_get_count(const char *pkgname, unsigned int *count);
+int _badge_get_count(const char *pkgname, unsigned int *count);
 
-int _badget_set_display(const char *pkgname,
+int _badge_set_display(const char *pkgname,
 			unsigned int is_display);
 
-int _badget_get_display(const char *pkgname, unsigned int *is_display);
+int _badge_get_display(const char *pkgname, unsigned int *is_display);
 
 int _badge_register_changed_cb(badge_change_cb callback, void *data);
 

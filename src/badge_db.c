@@ -153,7 +153,7 @@ int badge_db_set_count(const char *pkgname, const char *caller, unsigned int cou
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_set_count(caller, pkgname, count);
+	result = _badge_set_count(caller, pkgname, count);
 
 	return result;
 }
@@ -163,7 +163,7 @@ int badge_db_get_count(const char *pkgname, unsigned int *count)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_get_count(pkgname, count);
+	result = _badge_get_count(pkgname, count);
 
 	return result;
 }
@@ -173,7 +173,7 @@ int badge_db_set_display_option(const char *pkgname, const char *caller, unsigne
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_set_display(pkgname, is_display);
+	result = _badge_set_display(pkgname, is_display);
 
 	return result;
 }
@@ -183,7 +183,7 @@ int badge_db_get_display_option(const char *pkgname, unsigned int *is_display)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badget_get_display(pkgname, is_display);
+	result = _badge_get_display(pkgname, is_display);
 
 	return result;
 }
