@@ -80,18 +80,22 @@ int badge_ipc_is_master_ready(void)
 			&err);
 
 	if (err || (result == NULL)) {
+		/* LCOV_EXCL_START */
 		if (err) {
 			ERR("No reply. error = %s", err->message);
 			g_error_free(err);
 		}
 		is_master_started = 0;
+		/* LCOV_EXCL_STOP */
 	} else {
 		g_variant_get(result, "(b)", &name_exist);
 
 		if (!name_exist) {
+			/* LCOV_EXCL_START */
 			ERR("Name not exist %s", PROVIDER_BUS_NAME);
 			ERR("the master has been stopped");
 			is_master_started = 0;
+			/* LCOV_EXCL_STOP */
 		} else {
 			DBG("the master has been started");
 			is_master_started = 1;
@@ -178,6 +182,7 @@ int badge_ipc_del_deferred_task(
 	return BADGE_ERROR_INVALID_PARAMETER;
 }
 
+/* LCOV_EXCL_START */
 static void _do_deferred_task(void)
 {
 	task_list *list_do;
@@ -202,10 +207,12 @@ static void _do_deferred_task(void)
 		list_do = list_temp;
 	}
 }
+/* LCOV_EXCL_STOP */
 
 /*
  * dbus handler implementation
  */
+/* LCOV_EXCL_START */
 static void _insert_badge_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
@@ -213,7 +220,9 @@ static void _insert_badge_notify(GVariant *parameters)
 	g_variant_get(parameters, "(&s)", &pkgname);
 	badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0);
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static void _delete_badge_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
@@ -221,7 +230,9 @@ static void _delete_badge_notify(GVariant *parameters)
 	g_variant_get(parameters, "(&s)", &pkgname);
 	badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0);
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static void _set_badge_count_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
@@ -230,7 +241,9 @@ static void _set_badge_count_notify(GVariant *parameters)
 	g_variant_get(parameters, "(&si)", &pkgname, &count);
 	badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count);
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static void _set_disp_option_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
@@ -239,7 +252,9 @@ static void _set_disp_option_notify(GVariant *parameters)
 	g_variant_get(parameters, "(&si)", &pkgname, &is_display);
 	badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static void _handle_badge_notify(GDBusConnection *connection,
 		const gchar     *sender_name,
 		const gchar     *object_path,
@@ -258,6 +273,7 @@ static void _handle_badge_notify(GDBusConnection *connection,
 	else if (g_strcmp0(signal_name, "set_disp_option_notify") == 0)
 		_set_disp_option_notify(parameters);
 }
+/* LCOV_EXCL_STOP */
 
 static int _dbus_init(void)
 {
@@ -266,10 +282,12 @@ static int _dbus_init(void)
 	if (_gdbus_conn == NULL) {
 		_gdbus_conn = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
 		if (_gdbus_conn == NULL) {
+			/* LCOV_EXCL_START */
 			if (error != NULL) {
 				ERR("Failed to get dbus [%s]", error->message);
 				g_error_free(error);
 			}
+			/* LCOV_EXCL_STOP */
 			return BADGE_ERROR_IO_ERROR;
 		}
 		badge_error_quark();
@@ -298,8 +316,10 @@ static int _dbus_signal_init()
 
 		DBG("subscribe id : %d", id);
 		if (id == 0) {
+			/* LCOV_EXCL_START */
 			ret = BADGE_ERROR_IO_ERROR;
 			ERR("Failed to _register_noti_dbus_interface");
+			/* LCOV_EXCL_STOP */
 		} else {
 			monitor_id = id;
 		}
@@ -323,10 +343,12 @@ static int _send_sync_badge(GVariant *body, GDBusMessage **reply, char *cmd)
 			PROVIDER_BADGE_INTERFACE_NAME,
 			cmd);
 	if (!msg) {
+		/* LCOV_EXCL_START */
 		ERR("Can't allocate new method call");
 		if (body)
 			g_variant_unref(body);
 		return BADGE_ERROR_OUT_OF_MEMORY;
+		/* LCOV_EXCL_STOP */
 	}
 
 	if (body != NULL)
@@ -344,6 +366,7 @@ static int _send_sync_badge(GVariant *body, GDBusMessage **reply, char *cmd)
 	g_object_unref(msg);
 
 	if (!*reply) {
+		/* LCOV_EXCL_START */
 		ret = BADGE_ERROR_SERVICE_NOT_READY;
 		if (err != NULL) {
 			ERR("No reply. cmd = %s,  error = %s", cmd, err->message);
@@ -352,6 +375,7 @@ static int _send_sync_badge(GVariant *body, GDBusMessage **reply, char *cmd)
 			g_error_free(err);
 		}
 		return ret;
+		/* LCOV_EXCL_STOP */
 	}
 
 	if (g_dbus_message_to_gerror(*reply, &err)) {
@@ -389,6 +413,7 @@ static int _ipc_monitor_register(void)
 	return  _send_service_register();
 }
 
+/* LCOV_EXCL_START */
 static void _on_name_appeared(GDBusConnection *connection,
 		const gchar     *name,
 		const gchar     *name_owner,
@@ -400,7 +425,9 @@ static void _on_name_appeared(GDBusConnection *connection,
 
 	_do_deferred_task();
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static void _on_name_vanished(GDBusConnection *connection,
 		const gchar     *name,
 		gpointer         user_data)
@@ -408,6 +435,7 @@ static void _on_name_vanished(GDBusConnection *connection,
 	DBG("name vanished : %s", name);
 	is_master_started = 0;
 }
+/* LCOV_EXCL_STOP */
 
 int badge_ipc_monitor_init(void)
 {
@@ -416,20 +444,26 @@ int badge_ipc_monitor_init(void)
 
 	ret = _dbus_init();
 	if (ret != BADGE_ERROR_NONE) {
+		/* LCOV_EXCL_START */
 		ERR("Can't init dbus %d", ret);
 		return ret;
+		/* LCOV_EXCL_STOP */
 	}
 
 	ret = _dbus_signal_init();
 	if (ret != BADGE_ERROR_NONE) {
+		/* LCOV_EXCL_START */
 		ERR("Can't init dbus signal %d", ret);
 		return ret;
+		/* LCOV_EXCL_STOP */
 	}
 
 	ret = _ipc_monitor_register();
 	if (ret != BADGE_ERROR_NONE) {
+		/* LCOV_EXCL_START */
 		ERR("Can't init ipc_monitor_register %d", ret);
 		return ret;
+		/*LCOV_EXCL_STOP */
 	}
 
 	if (provider_monitor_id == 0) {
@@ -443,10 +477,12 @@ int badge_ipc_monitor_init(void)
 				NULL);
 
 		if (provider_monitor_id == 0) {
+			/* LCOV_EXCL_START */
 			ERR("watch on name fail");
 			g_dbus_connection_signal_unsubscribe(_gdbus_conn, monitor_id);
 			monitor_id = 0;
 			return BADGE_ERROR_IO_ERROR;
+			/* LCOV_EXCL_STOP */
 		}
 	}
 
