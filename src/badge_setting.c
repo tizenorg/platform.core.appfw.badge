@@ -237,6 +237,7 @@ EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, c
 		goto return_close_db;
 	}
 
+	/* LCOV_EXCL_START */
 	sqlbuf = sqlite3_mprintf("SELECT %q FROM %q " \
 			"WHERE appid = %Q",
 			column, SETTING_DB_TABLE, pkgname);
@@ -269,6 +270,7 @@ EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, c
 			goto return_close_db;
 		}
 	}
+	/* LCOV_EXCL_STOP */
 
 return_close_db:
 	if (sqlbuf)
