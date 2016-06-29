@@ -24,6 +24,7 @@
 #define __BADGE_SETTING_H__
 
 #include <stdbool.h>
+#include <sys/types.h>
 #include <badge_error.h>
 
 #ifdef __cplusplus
@@ -40,6 +41,8 @@ extern "C" {
  */
 int badge_setting_property_set(const char *pkgname, const char *property, const char *value);
 
+int badge_setting_property_set_for_uid(const char *pkgname, const char *property, const char *value, uid_t uid);
+
 /**
  * @brief This function gets badge property for designated package.
  * @param[in] pkgname The name of designated package
@@ -50,6 +53,7 @@ int badge_setting_property_set(const char *pkgname, const char *property, const 
  */
 int badge_setting_property_get(const char *pkgname, const char *property, char **value);
 
+int badge_setting_property_get_for_uid(const char *pkgname, const char *property, char **value, uid_t uid);
 
 #ifdef __cplusplus
 }

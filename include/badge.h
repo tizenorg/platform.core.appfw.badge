@@ -24,6 +24,7 @@
 #define __BADGE_DEF_H__
 
 #include <stdbool.h>
+#include <sys/types.h>
 #include <badge_error.h>
 
 #ifdef __cplusplus

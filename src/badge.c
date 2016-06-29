@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <package_manager.h>
 
 #include "badge.h"
@@ -33,210 +34,74 @@
 EXPORT_API
 int badge_create(const char *pkgname, const char *writable_pkg)
 {
-	char *caller = NULL;
-	int err = BADGE_ERROR_NONE;
-
-	if (pkgname == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		return BADGE_ERROR_PERMISSION_DENIED;
-	}
-
-	err = badge_ipc_request_insert(pkgname, writable_pkg, caller);
-
-	free(caller);
-	return err;
+	return badge_create_for_uid(pkgname, writable_pkg, getuid());
 }
 
 EXPORT_API
 int badge_new(const char *writable_app_id)
 {
-	char *caller = NULL;
-	int err = BADGE_ERROR_NONE;
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		return BADGE_ERROR_PERMISSION_DENIED;
-	}
-
-	err = badge_ipc_request_insert(caller, writable_app_id, caller);
-
-	free(caller);
-	return err;
+	return badge_new_for_uid(writable_app_id, getuid());
 }
 
 EXPORT_API
 int badge_add(const char *badge_app_id)
 {
-	char *caller = NULL;
-	int err = BADGE_ERROR_NONE;
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		return BADGE_ERROR_PERMISSION_DENIED;
-	}
-
-	if (badge_app_id == NULL) {
-		badge_app_id = caller;
-	} else {
-		int pkgmgr_ret  = PACKAGE_MANAGER_ERROR_NONE;
-		package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
-
-		pkgmgr_ret = package_manager_compare_app_cert_info(badge_app_id, caller, &compare_result);
-
-		if (pkgmgr_ret != PACKAGE_MANAGER_ERROR_NONE || compare_result != PACKAGE_MANAGER_COMPARE_MATCH) {
-			err = BADGE_ERROR_INVALID_PACKAGE;
-			goto out;
-		}
-	}
-
-	err = badge_ipc_request_insert(badge_app_id, caller, caller);
-
-out:
-	if (caller)
-		free(caller);
-	return err;
+	return badge_add_for_uid(badge_app_id, getuid());
 }
 
 EXPORT_API
 int badge_remove(const char *app_id)
 {
-	char *caller = NULL;
-	int result = BADGE_ERROR_NONE;
-
-	if (app_id == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		result = BADGE_ERROR_PERMISSION_DENIED;
-		goto out;
-	}
-
-	result = badge_ipc_request_delete(app_id, caller);
-
-out:
-	if (caller)
-		free(caller);
-	return result;
+	return badge_remove_for_uid(app_id, getuid());
 }
 
 EXPORT_API
 int badge_is_existing(const char *app_id, bool *existing)
 {
-	return badge_ipc_request_is_existing(app_id, existing);
+	return badge_is_existing_for_uid(app_id, existing, getuid());
 }
 
 EXPORT_API
 int badge_foreach(badge_foreach_cb callback, void *user_data)
 {
-	int result = BADGE_ERROR_NONE;
-	result = badge_ipc_request_get_list(callback, user_data);
-	if (result == BADGE_ERROR_IO_ERROR)
-		result = BADGE_ERROR_FROM_DB;
-	return result;
+	return badge_foreach_for_uid(callback, user_data, getuid());
 }
 
 EXPORT_API
 int badge_set_count(const char *app_id, unsigned int count)
 {
-	char *caller = NULL;
-	int result = BADGE_ERROR_NONE;
-
-	if (app_id == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	DBG("app_id %s, count %d", app_id, count);
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		result = BADGE_ERROR_PERMISSION_DENIED;
-		goto out;
-	}
-
-	result = badge_ipc_request_set_count(app_id, caller, count);
-out:
-	if (caller)
-		free(caller);
-	return result;
+	return badge_set_count_for_uid(app_id, count, getuid());
 }
 
 EXPORT_API
 int badge_get_count(const char *app_id, unsigned int *count)
 {
-	int result = BADGE_ERROR_NONE;
-	if (app_id == NULL || count == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	result = badge_ipc_request_get_count(app_id, count);
-	if (result == BADGE_ERROR_IO_ERROR)
-		result = BADGE_ERROR_FROM_DB;
-
-	return result;
+	return badge_get_count_for_uid(app_id, count, getuid());
 }
 
 EXPORT_API
 int badge_set_display(const char *app_id, unsigned int is_display)
 {
-	char *caller = NULL;
-	int result = BADGE_ERROR_NONE;
-
-	if (app_id == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	caller = _badge_get_pkgname_by_pid();
-	if (!caller) {
-		ERR("fail to get caller pkgname");
-		result = BADGE_ERROR_PERMISSION_DENIED;
-		goto out;
-	}
-
-	result = badge_ipc_request_set_display(app_id, caller, is_display);
-
-out:
-	if (caller)
-		free(caller);
-	return result;
+	return badge_set_display_for_uid(app_id, is_display, getuid());
 }
 
 EXPORT_API
 int badge_get_display(const char *app_id, unsigned int *is_display)
 {
-	int result = BADGE_ERROR_NONE;
-	if (app_id == NULL || is_display == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	result = badge_ipc_request_get_display(app_id, is_display);
-	if (result == BADGE_ERROR_IO_ERROR)
-		result = BADGE_ERROR_FROM_DB;
-
-	return result;
+	return badge_get_display_for_uid(app_id, is_display, getuid());
 }
+
 
 EXPORT_API
 int badge_register_changed_cb(badge_change_cb callback, void *data)
 {
-	if (callback == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	return _badge_register_changed_cb(callback, data);
+	return badge_register_changed_cb_for_uid(callback, data, getuid());
 }
 
 EXPORT_API
 int badge_unregister_changed_cb(badge_change_cb callback)
 {
-	if (callback == NULL)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	return _badge_unregister_changed_cb(callback);
+	return badge_unregister_changed_cb_for_uid(callback, getuid());
 }
 
 EXPORT_API

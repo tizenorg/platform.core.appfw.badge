@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdarg.h>
 #include <sqlite3.h>
 #include <tzplatform_config.h>
@@ -31,21 +32,25 @@
 #include "badge_log.h"
 #include "badge_error.h"
 #include "badge_internal.h"
+#include "badge_db.h"
 
 #define BADGE_DB_NAME ".badge.db"
 #define CREATE_BADGE_TABLE " \
 PRAGMA journal_mode = PERSIST; \
+PRAGMA synchronous = FULL; \
 create table if not exists badge_data ( \
 	pkgname TEXT NOT NULL, \
 	writable_pkgs TEXT, \
 	badge INTEGER default 0, \
 	rowid INTEGER PRIMARY KEY AUTOINCREMENT, \
-	UNIQUE (pkgname) \
+	uid INTEGER, \
+	UNIQUE (pkgname, uid) \
 ); \
 create table if not exists badge_option ( \
 	pkgname TEXT NOT NULL, \
 	display INTEGER default 1, \
-	UNIQUE (pkgname) \
+	uid INTEGER, \
+	UNIQUE (pkgname, uid); \
 ); "
 
 EXPORT_API
@@ -55,6 +60,7 @@ int badge_db_init()
 	sqlite3 *db = NULL;
 	char *errmsg = NULL;
 	char defname[FILENAME_MAX];
+	char *query = NULL;
 	const char *db_path = tzplatform_getenv(TZ_SYS_DB);
 	if (db_path == NULL) {
 		ERR("fail to get db_path");
@@ -69,6 +75,9 @@ int badge_db_init()
 		ERR("fail to open notification db %d", r);
 		return BADGE_ERROR_IO_ERROR;
 	}
+	query = sqlite3_mprintf(CREATE_BADGE_TABLE, tzplatform_getuid(TZ_SYS_DEFAULT_USER));
+	if (query)
+		sqlite3_free(query);
 
 	r = sqlite3_exec(db, CREATE_BADGE_TABLE, NULL, NULL, &errmsg);
 	if (r != SQLITE_OK) {
@@ -83,23 +92,23 @@ int badge_db_init()
 }
 
 EXPORT_API
-int badge_db_is_existing(const char *pkgname, bool *existing)
+int badge_db_is_existing(const char *pkgname, bool *existing, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
-	result = _badge_is_existing(pkgname, existing);
+	result = _badge_is_existing(pkgname, existing, uid);
 	return result;
 }
 
 EXPORT_API
-int badge_db_get_list(GList **badge_list)
+int badge_db_get_list(GList **badge_list, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
-	result = _badge_get_list(badge_list);
+	result = _badge_get_list(badge_list, uid);
 	return result;
 }
 
 EXPORT_API
-int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller)
+int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller, uid_t uid)
 {
 	int err = BADGE_ERROR_NONE;
 	badge_h *badge = NULL;
@@ -118,7 +127,7 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 
 	INFO("pkgs : %s", pkgs);
 
-	badge = _badge_new(pkgname, pkgs, &err);
+	badge = _badge_new(pkgname, pkgs, &err, uid);
 	if (!badge) {
 		ERR("fail to _badge_new : %d", err);
 		free(pkgs);
@@ -126,7 +135,7 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 	}
 	free(pkgs);
 
-	err = _badge_insert(badge);
+	err = _badge_insert(badge, uid);
 	if (err != BADGE_ERROR_NONE) {
 		ERR("fail to _badge_insert : %d", err);
 		_badge_free(badge);
@@ -139,51 +148,51 @@ int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *c
 }
 
 EXPORT_API
-int badge_db_delete(const char *pkgname, const char *caller)
+int badge_db_delete(const char *pkgname, const char *caller, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_remove(caller, pkgname);
+	result = _badge_remove(caller, pkgname, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_set_count(const char *pkgname, const char *caller, unsigned int count)
+int badge_db_set_count(const char *pkgname, const char *caller, unsigned int count, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_set_count(caller, pkgname, count);
+	result = _badge_set_count(caller, pkgname, count, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_get_count(const char *pkgname, unsigned int *count)
+int badge_db_get_count(const char *pkgname, unsigned int *count, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_get_count(pkgname, count);
+	result = _badge_get_count(pkgname, count, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_set_display_option(const char *pkgname, const char *caller, unsigned int is_display)
+int badge_db_set_display_option(const char *pkgname, unsigned int is_display, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_set_display(pkgname, is_display);
+	result = _badge_set_display(pkgname, is_display, uid);
 
 	return result;
 }
 
 EXPORT_API
-int badge_db_get_display_option(const char *pkgname, unsigned int *is_display)
+int badge_db_get_display_option(const char *pkgname, unsigned int *is_display, uid_t uid)
 {
 	int result = BADGE_ERROR_NONE;
 
-	result = _badge_get_display(pkgname, is_display);
+	result = _badge_get_display(pkgname, is_display, uid);
 
 	return result;
 }

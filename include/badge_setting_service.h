@@ -24,14 +24,15 @@
 #define __BADGE_SETTING_SERVICE_H__
 
 #include <stdbool.h>
+#include <sys/types.h>
 #include <badge_error.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int badge_setting_db_set(const char *pkgname, const char *property, const char *value);
-int badge_setting_db_get(const char *pkgname, const char *property, char **value);
+int badge_setting_db_set(const char *pkgname, const char *property, const char *value, uid_t uid);
+int badge_setting_db_get(const char *pkgname, const char *property, char **value, uid_t uid);
 
 #ifdef __cplusplus
 }

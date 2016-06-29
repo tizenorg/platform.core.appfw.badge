@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <sqlite3.h>
 #include <db-util.h>
 #include <tzplatform_config.h>
@@ -36,7 +37,6 @@
 
 #define SETTING_DB_TABLE "notification_setting"
 #define SETTING_DB_FILE tzplatform_mkpath(TZ_SYS_DB, "/.notification_parser.db")
-
 
 struct prop_table {
 	const char *property;
@@ -139,7 +139,7 @@ free_and_return:
 	return result;
 }
 
-EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, const char *value)
+EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, const char *value, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -201,7 +201,7 @@ return_close_db:
 	return result;
 }
 
-EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, char **value)
+EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, char **value, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -289,40 +289,10 @@ return_close_db:
 
 EXPORT_API int badge_setting_property_set(const char *pkgname, const char *property, const char *value)
 {
-	int ret = 0;
-
-	if (!pkgname)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!property)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!value)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	ret = badge_ipc_setting_property_set(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE)
-		return ret;
-
-	return BADGE_ERROR_NONE;
+	return badge_setting_property_set_for_uid(pkgname, property, value, getuid());
 }
 
 EXPORT_API int badge_setting_property_get(const char *pkgname, const char *property, char **value)
 {
-	int ret = 0;
-
-	if (!pkgname)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!property)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!value)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	ret = badge_ipc_setting_property_get(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE)
-		return ret;
-
-	return BADGE_ERROR_NONE;
+	return badge_setting_property_get_for_uid(pkgname, property, value, getuid());
 }
