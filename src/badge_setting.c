@@ -32,6 +32,7 @@
 #include "badge_internal.h"
 #include "badge_ipc.h"
 #include "badge_db.h"
+#include "badge_setting.h"
 
 #define SETTING_DB_TABLE "notification_setting"
 #define SETTING_DB_FILE tzplatform_mkpath(TZ_SYS_DB, "/.notification_parser.db")

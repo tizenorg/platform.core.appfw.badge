@@ -204,26 +204,6 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
  */
 int badge_create(const char *pkgname, const char *writable_pkg);
 
-/**
- * @brief This function sets badge property for designated package.
- * @param[in] pkgname The name of designated package
- * @param[in] property name
- * @param[in] property value
- * @return #BADGE_ERROR_NONE if success, other value if failure
- * @see #badge_error_e
- */
-int badge_setting_property_set(const char *pkgname, const char *property, const char *value);
-
-/**
- * @brief This function gets badge property for designated package.
- * @param[in] pkgname The name of designated package
- * @param[in] property name
- * @param[in] pointer which can save the getting value
- * @return #BADGE_ERROR_NONE if success, other value if failure
- * @see #badge_error_e
- */
-int badge_setting_property_get(const char *pkgname, const char *property, char **value);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
