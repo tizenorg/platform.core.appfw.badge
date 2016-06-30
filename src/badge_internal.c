@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <glib.h>
+#include <gio/gio.h>
 #include <dbus/dbus.h>
 #include <dbus/dbus-glib-lowlevel.h>
 #include <aul.h>
@@ -58,7 +59,7 @@ struct _badge_cb_data {
 	void *data;
 };
 
-static GList *g_badge_cb_list;
+static GHashTable *_badge_cb_hash = NULL;
 
 static inline long _get_max_len(void)
 {
@@ -126,7 +127,7 @@ char *_badge_get_pkgname_by_pid(void)
 }
 
 static int _badge_check_data_inserted(const char *pkgname,
-					sqlite3 *db)
+					sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -141,8 +142,8 @@ static int _badge_check_data_inserted(const char *pkgname,
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
-			 "pkgname = %Q",
-			 BADGE_TABLE_NAME, pkgname);
+			 "pkgname = %Q AND uid = %d",
+			 BADGE_TABLE_NAME, pkgname, uid);
 
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
@@ -185,7 +186,7 @@ free_and_return:
 }
 
 static int _badge_check_option_inserted(const char *pkgname,
-					sqlite3 *db)
+					sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -200,8 +201,8 @@ static int _badge_check_option_inserted(const char *pkgname,
 		return BADGE_ERROR_INVALID_PARAMETER;
 
 	sqlbuf = sqlite3_mprintf("SELECT count(*) FROM %q WHERE " \
-			 "pkgname = %Q",
-			 BADGE_OPTION_TABLE_NAME, pkgname);
+			 "pkgname = %Q AND uid = %d",
+			 BADGE_OPTION_TABLE_NAME, pkgname, uid);
 
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
@@ -263,7 +264,7 @@ static int _is_same_certinfo(const char *caller, const char *pkgname)
 }
 
 static int _badge_check_writable(const char *caller,
-			const char *pkgname, sqlite3 *db)
+			const char *pkgname, sqlite3 *db, uid_t uid)
 {
 	sqlite3_stmt *stmt = NULL;
 	int count = 0;
@@ -288,9 +289,10 @@ static int _badge_check_writable(const char *caller,
 		return BADGE_ERROR_NONE;
 
 	sqlbuf = sqlite3_mprintf("SELECT COUNT(*) FROM %q WHERE " \
-			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'",
+			 "pkgname = %Q AND writable_pkgs LIKE '%%%q%%'" \
+			 "AND uid = %d",
 			 BADGE_TABLE_NAME,
-			 pkgname, caller);
+			 pkgname, caller, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
 		return BADGE_ERROR_OUT_OF_MEMORY;
@@ -326,7 +328,7 @@ free_and_return:
 	/* LCOV_EXCL_STOP */
 }
 
-int _badge_is_existing(const char *pkgname, bool *existing)
+int _badge_is_existing(const char *pkgname, bool *existing, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
@@ -349,7 +351,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 		/* LCOV_EXCL_STOP */
 	}
 
-	result = _badge_check_data_inserted(pkgname, db);
+	result = _badge_check_data_inserted(pkgname, db, uid);
 	if (result == BADGE_ERROR_ALREADY_EXIST) {
 		*existing = TRUE;
 		result = BADGE_ERROR_NONE;
@@ -365,7 +367,7 @@ int _badge_is_existing(const char *pkgname, bool *existing)
 	return result;
 }
 
-int _badge_get_list(GList **badge_list)
+int _badge_get_list(GList **badge_list, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int result = BADGE_ERROR_NONE;
@@ -384,8 +386,8 @@ int _badge_get_list(GList **badge_list)
 		/* LCOV_EXCL_STOP */
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q",
-				BADGE_TABLE_NAME);
+	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q WHERE uid = %d",
+				BADGE_TABLE_NAME, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc sql query");
@@ -453,7 +455,7 @@ free_and_return:
 }
 
 /* LCOV_EXCL_START */
-int _badge_foreach_existed(badge_foreach_cb callback, void *data)
+int _badge_foreach_existed(badge_foreach_cb callback, void *data, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int result = BADGE_ERROR_NONE;
@@ -472,8 +474,8 @@ int _badge_foreach_existed(badge_foreach_cb callback, void *data)
 		return BADGE_ERROR_FROM_DB;
 	}
 
-	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q",
-				BADGE_TABLE_NAME);
+	sqlbuf = sqlite3_mprintf("SELECT pkgname, badge FROM %q WHERE uid = %d",
+				BADGE_TABLE_NAME, uid);
 	if (!sqlbuf) {
 		ERR("fail to alloc sql query");
 		result = BADGE_ERROR_OUT_OF_MEMORY;
@@ -532,7 +534,7 @@ free_and_return:
 }
 /* LCOV_EXCL_STOP */
 
-int _badge_insert(badge_h *badge)
+int _badge_insert(badge_h *badge, uid_t uid)
 {
 	sqlite3 *db = NULL;
 	int sqlret;
@@ -552,7 +554,7 @@ int _badge_insert(badge_h *badge)
 	}
 
 	/* Check pkgname & id */
-	ret = _badge_check_data_inserted(badge->pkgname, db);
+	ret = _badge_check_data_inserted(badge->pkgname, db, uid);
 	if (ret != BADGE_ERROR_NOT_EXIST) {
 		/* LCOV_EXCL_START */
 		result = ret;
@@ -562,11 +564,12 @@ int _badge_insert(badge_h *badge)
 
 	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 			"(pkgname, " \
-			"writable_pkgs) " \
-			"VALUES "
-			"(%Q, %Q);",
+			"writable_pkgs, " \
+			"uid) "\
+			"VALUES " \
+			"(%Q, %Q, %d);",
 			 BADGE_TABLE_NAME,
-			 badge->pkgname, badge->writable_pkgs);
+			 badge->pkgname, badge->writable_pkgs, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -586,18 +589,19 @@ int _badge_insert(badge_h *badge)
 	}
 
 	/* inserting badge options */
-	ret = _badge_check_option_inserted(badge->pkgname, db);
+	ret = _badge_check_option_inserted(badge->pkgname, db, uid);
 	if (ret != BADGE_ERROR_NOT_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
-			"(pkgname) " \
+			"(pkgname, " \
+			"uid) " \
 			"VALUES "
-			"(%Q);",
+			"(%Q, %d);",
 			BADGE_OPTION_TABLE_NAME,
-			 badge->pkgname);
+			 badge->pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -627,7 +631,7 @@ return_close_db:
 	return result;
 }
 
-int _badge_remove(const char *caller, const char *pkgname)
+int _badge_remove(const char *caller, const char *pkgname, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -649,20 +653,20 @@ int _badge_remove(const char *caller, const char *pkgname)
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_writable(caller, pkgname, db);
+	ret = _badge_check_writable(caller, pkgname, db, uid);
 	if (ret != BADGE_ERROR_NONE) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q",
-			 BADGE_TABLE_NAME, pkgname);
+	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q AND uid = %d",
+			 BADGE_TABLE_NAME, pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -680,14 +684,14 @@ int _badge_remove(const char *caller, const char *pkgname)
 	}
 
 	/* treating option table */
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q",
-			BADGE_OPTION_TABLE_NAME, pkgname);
+	sqlbuf = sqlite3_mprintf("DELETE FROM %q WHERE pkgname = %Q AND uid = %d",
+			BADGE_OPTION_TABLE_NAME, pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -718,7 +722,7 @@ return_close_db:
 }
 
 int _badge_set_count(const char *caller, const char *pkgname,
-			unsigned int count)
+			unsigned int count, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -740,21 +744,21 @@ int _badge_set_count(const char *caller, const char *pkgname,
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_writable(caller, pkgname, db);
+	ret = _badge_check_writable(caller, pkgname, db, uid);
 	if (ret != BADGE_ERROR_NONE) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("UPDATE %q SET badge = %d " \
-			"WHERE pkgname = %Q",
-			 BADGE_TABLE_NAME, count, pkgname);
+			"WHERE pkgname = %Q AND uid = %d",
+			 BADGE_TABLE_NAME, count, pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -784,7 +788,7 @@ return_close_db:
 	return result;
 }
 
-int _badge_get_count(const char *pkgname, unsigned int *count)
+int _badge_get_count(const char *pkgname, unsigned int *count, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -810,15 +814,15 @@ int _badge_get_count(const char *pkgname, unsigned int *count)
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
 	sqlbuf = sqlite3_mprintf("SELECT badge FROM %q " \
-			"WHERE pkgname = %Q",
-			 BADGE_TABLE_NAME, pkgname);
+			"WHERE pkgname = %Q AND uid = %d",
+			 BADGE_TABLE_NAME, pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -857,8 +861,7 @@ return_close_db:
 	return result;
 }
 
-int _badge_set_display(const char *pkgname,
-			unsigned int is_display)
+int _badge_set_display(const char *pkgname, unsigned int is_display, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -880,17 +883,17 @@ int _badge_set_display(const char *pkgname,
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _badge_check_data_inserted(pkgname, db);
+	ret = _badge_check_data_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		result = ret;
 		goto return_close_db;
 	}
 
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret == BADGE_ERROR_ALREADY_EXIST) {
 		sqlbuf = sqlite3_mprintf("UPDATE %q SET display = %d " \
-				"WHERE pkgname = %Q",
-				BADGE_OPTION_TABLE_NAME, is_display, pkgname);
+				"WHERE pkgname = %Q AND uid = %d",
+				BADGE_OPTION_TABLE_NAME, is_display, pkgname, uid);
 		if (!sqlbuf) {
 			/* LCOV_EXCL_START */
 			ERR("fail to alloc query");
@@ -912,11 +915,12 @@ int _badge_set_display(const char *pkgname,
 	} else if (ret == BADGE_ERROR_NOT_EXIST) {
 		sqlbuf = sqlite3_mprintf("INSERT INTO %q " \
 				"(pkgname, " \
-				"display) " \
+				"display, " \
+				"uid) " \
 				"VALUES "
-				"(%Q, %d);",
+				"(%Q, %d, %d);",
 				BADGE_OPTION_TABLE_NAME,
-				pkgname, is_display);
+				pkgname, is_display, uid);
 		if (!sqlbuf) {
 			/* LCOV_EXCL_START */
 			ERR("fail to alloc query");
@@ -950,7 +954,7 @@ return_close_db:
 	return result;
 }
 
-int _badge_get_display(const char *pkgname, unsigned int *is_display)
+int _badge_get_display(const char *pkgname, unsigned int *is_display, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -976,7 +980,7 @@ int _badge_get_display(const char *pkgname, unsigned int *is_display)
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _badge_check_option_inserted(pkgname, db);
+	ret = _badge_check_option_inserted(pkgname, db, uid);
 	if (ret != BADGE_ERROR_ALREADY_EXIST) {
 		if (ret == BADGE_ERROR_NOT_EXIST)
 			*is_display = 1;
@@ -986,8 +990,8 @@ int _badge_get_display(const char *pkgname, unsigned int *is_display)
 	}
 
 	sqlbuf = sqlite3_mprintf("SELECT display FROM %q " \
-			"WHERE pkgname = %Q",
-			BADGE_OPTION_TABLE_NAME, pkgname);
+			"WHERE pkgname = %Q AND uid = %d",
+			BADGE_OPTION_TABLE_NAME, pkgname, uid);
 	if (!sqlbuf) {
 		/* LCOV_EXCL_START */
 		ERR("fail to alloc query");
@@ -1027,30 +1031,40 @@ return_close_db:
 }
 
 void badge_changed_cb_call(unsigned int action, const char *pkgname,
-			unsigned int count)
+			unsigned int count, uid_t uid)
 {
-	DBG("call badge_change_cb");
-	GList *list = g_badge_cb_list;
+	GList *badge_cb_list = NULL;
 	struct _badge_cb_data *bd = NULL;
 
-	while (list) {
-		bd = g_list_nth_data(list, 0);
-		if (!bd)
-			continue;
 
-		if (bd->callback) {
+	DBG("call badge_change_cb");
+
+	if (_badge_cb_hash == NULL)
+		return;
+
+	badge_cb_list = (GList *)g_hash_table_lookup(_badge_cb_hash, GUINT_TO_POINTER(uid));
+
+	if (badge_cb_list == NULL) {
+		ERR("invalid data");
+		return;
+	}
+
+	badge_cb_list = g_list_first(badge_cb_list);
+
+	for (; badge_cb_list != NULL; badge_cb_list = badge_cb_list->next) {
+		bd = badge_cb_list->data;
+
+		if (bd != NULL && bd->callback != NULL) {
 			DBG("call badge_change_cb : action %d, pkgname %s, count %d",
-					action, pkgname, count);
+			    action, pkgname, count);
 			bd->callback(action, pkgname, count, bd->data);
 		}
-
-		list = g_list_next(list);
 	}
 }
 
-static int _badge_changed_monitor_init()
+static int _badge_changed_monitor_init(uid_t uid)
 {
-	return badge_ipc_monitor_init();
+	return badge_ipc_monitor_init(uid);
 }
 
 static void _badge_chanaged_monitor_fini()
@@ -1072,70 +1086,90 @@ static gint _badge_data_compare(gconstpointer a, gconstpointer b)
 	return 1;
 }
 
-int _badge_register_changed_cb(badge_change_cb callback, void *data)
+int _badge_register_changed_cb(badge_change_cb callback, void *data, uid_t uid)
 {
 	struct _badge_cb_data *bd = NULL;
-	GList *found = NULL;
+	GList *badge_cb_list = NULL;
+	GList *badge_found_list = NULL;
 	int ret;
 
-	if (!callback)
+	if (callback == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
-			_badge_data_compare);
+	if (_badge_cb_hash == NULL)
+		_badge_cb_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
 
-	if (found) {
-		bd = g_list_nth_data(found, 0);
-		bd->data = data;
+	bd = (struct _badge_cb_data *)malloc(sizeof(struct _badge_cb_data));
+	if (bd == NULL)
+		return BADGE_ERROR_OUT_OF_MEMORY;
+
+	bd->callback = callback;
+	bd->data = data;
+
+	badge_cb_list = (GList *)g_hash_table_lookup(_badge_cb_hash, GUINT_TO_POINTER(uid));
+
+	if (badge_cb_list == NULL) {
+		badge_cb_list = g_list_append(badge_cb_list, bd);
+		g_hash_table_insert(_badge_cb_hash, GUINT_TO_POINTER(uid), badge_cb_list);
 	} else {
-
-		bd = malloc(sizeof(struct _badge_cb_data));
-		if (!bd)
-			return BADGE_ERROR_OUT_OF_MEMORY;
-
-
-		bd->callback = callback;
-		bd->data = data;
-
-		g_badge_cb_list = g_list_append(g_badge_cb_list, bd);
+		badge_found_list = g_list_find_custom(badge_cb_list, (gconstpointer)callback,
+						     _badge_data_compare);
+		if (badge_found_list) {
+			bd = g_list_nth_data(badge_found_list, 0);
+			bd->data = data;
+		} else {
+			badge_cb_list = g_list_append(badge_cb_list, bd);
+		}
 	}
 
-	ret = _badge_changed_monitor_init();
+	ret = _badge_changed_monitor_init(uid);
 	if (ret != BADGE_ERROR_NONE) {
 		/* LCOV_EXCL_START */
 		ERR("badge_ipc_monitor_init err : %d", ret);
-		_badge_unregister_changed_cb(callback);
+		_badge_unregister_changed_cb(callback, uid);
 		return ret;
 		/* LCOV_EXCL_STOP */
 	}
 	return BADGE_ERROR_NONE;
 }
 
-int _badge_unregister_changed_cb(badge_change_cb callback)
+int _badge_unregister_changed_cb(badge_change_cb callback, uid_t uid)
 {
-	GList *found = NULL;
+	GList *badge_cb_list = NULL;
+	GList *badge_delete_list = NULL;
 	struct _badge_cb_data *bd = NULL;
 
-	if (!callback)
+	if (callback == NULL)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	found = g_list_find_custom(g_badge_cb_list, (gconstpointer)callback,
+	if (_badge_cb_hash == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	badge_cb_list = (GList *)g_hash_table_lookup(_badge_cb_hash, GUINT_TO_POINTER(uid));
+
+	if (badge_cb_list == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	badge_delete_list = g_list_find_custom(badge_cb_list, (gconstpointer)callback,
 				_badge_data_compare);
 
-	if (found) {
-		bd = g_list_nth_data(found, 0);
-		g_badge_cb_list = g_list_delete_link(g_badge_cb_list, found);
+	if (badge_delete_list) {
+		bd = g_list_nth_data(badge_delete_list, 0);
+		badge_cb_list = g_list_delete_link(badge_cb_list, badge_delete_list);
 		free(bd);
+	} else {
+		return BADGE_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!g_badge_cb_list)
+	if (badge_cb_list == NULL)
+		g_hash_table_steal(_badge_cb_hash, GUINT_TO_POINTER(uid));
+	else
+		g_hash_table_replace(_badge_cb_hash, GUINT_TO_POINTER(uid), badge_cb_list);
+
+	if (g_hash_table_size(_badge_cb_hash) == 0)
 		_badge_chanaged_monitor_fini();
 
-	if (found != NULL)
-		return BADGE_ERROR_NONE;
-	else
-		return BADGE_ERROR_INVALID_PARAMETER;
-
+	return BADGE_ERROR_NONE;
 }
 
 int _badge_free(badge_h *badge)
@@ -1353,3 +1387,213 @@ char *_badge_pkgs_new_valist(int *err, const char *pkg1, va_list args)
 	return result;
 }
 /* LCOV_EXCL_STOP */
+
+
+EXPORT_API
+int badge_create_for_uid(const char *pkgname, const char *writable_pkg, uid_t uid)
+{
+	char *caller = NULL;
+	int err = BADGE_ERROR_NONE;
+
+	if (pkgname == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
+	}
+
+	err = badge_ipc_request_insert(pkgname, writable_pkg, caller, uid);
+
+	free(caller);
+	return err;
+}
+
+EXPORT_API
+int badge_new_for_uid(const char *writable_app_id, uid_t uid)
+{
+	char *caller = NULL;
+	int err = BADGE_ERROR_NONE;
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
+	}
+
+	err = badge_ipc_request_insert(caller, writable_app_id, caller, uid);
+
+	free(caller);
+	return err;
+}
+
+EXPORT_API
+int badge_add_for_uid(const char *badge_app_id, uid_t uid)
+{
+	char *caller = NULL;
+	int err = BADGE_ERROR_NONE;
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		return BADGE_ERROR_PERMISSION_DENIED;
+	}
+
+	if (badge_app_id == NULL) {
+		badge_app_id = caller;
+	} else {
+		int pkgmgr_ret  = PACKAGE_MANAGER_ERROR_NONE;
+		package_manager_compare_result_type_e compare_result = PACKAGE_MANAGER_COMPARE_MISMATCH;
+
+		pkgmgr_ret = package_manager_compare_app_cert_info(badge_app_id, caller, &compare_result);
+
+		if (pkgmgr_ret != PACKAGE_MANAGER_ERROR_NONE || compare_result != PACKAGE_MANAGER_COMPARE_MATCH) {
+			err = BADGE_ERROR_INVALID_PACKAGE;
+			goto out;
+		}
+	}
+
+	err = badge_ipc_request_insert(badge_app_id, caller, caller, uid);
+
+out:
+	if (caller)
+		free(caller);
+	return err;
+}
+
+EXPORT_API
+int badge_remove_for_uid(const char *app_id, uid_t uid)
+{
+	char *caller = NULL;
+	int result = BADGE_ERROR_NONE;
+
+	if (app_id == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
+	}
+
+	result = badge_ipc_request_delete(app_id, caller, uid);
+
+out:
+	if (caller)
+		free(caller);
+	return result;
+}
+
+EXPORT_API
+int badge_is_existing_for_uid(const char *app_id, bool *existing, uid_t uid)
+{
+	return badge_ipc_request_is_existing(app_id, existing, uid);
+}
+
+EXPORT_API
+int badge_foreach_for_uid(badge_foreach_cb callback, void *user_data, uid_t uid)
+{
+	int result = BADGE_ERROR_NONE;
+	result = badge_ipc_request_get_list(callback, user_data, uid);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
+	return result;
+}
+
+EXPORT_API
+int badge_set_count_for_uid(const char *app_id, unsigned int count, uid_t uid)
+{
+	char *caller = NULL;
+	int result = BADGE_ERROR_NONE;
+
+	if (app_id == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	DBG("app_id %s, count %d", app_id, count);
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
+	}
+
+	result = badge_ipc_request_set_count(app_id, caller, count, uid);
+out:
+	if (caller)
+		free(caller);
+	return result;
+}
+
+EXPORT_API
+int badge_get_count_for_uid(const char *app_id, unsigned int *count, uid_t uid)
+{
+	int result = BADGE_ERROR_NONE;
+	if (app_id == NULL || count == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	result = badge_ipc_request_get_count(app_id, count, uid);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
+
+	return result;
+}
+
+EXPORT_API
+int badge_set_display_for_uid(const char *app_id, unsigned int is_display, uid_t uid)
+{
+	char *caller = NULL;
+	int result = BADGE_ERROR_NONE;
+
+	if (app_id == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	caller = _badge_get_pkgname_by_pid();
+	if (!caller) {
+		ERR("fail to get caller pkgname");
+		result = BADGE_ERROR_PERMISSION_DENIED;
+		goto out;
+	}
+
+	result = badge_ipc_request_set_display(app_id, caller, is_display, uid);
+
+out:
+	if (caller)
+		free(caller);
+	return result;
+}
+
+EXPORT_API
+int badge_get_display_for_uid(const char *app_id, unsigned int *is_display, uid_t uid)
+{
+	int result = BADGE_ERROR_NONE;
+	if (app_id == NULL || is_display == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	result = badge_ipc_request_get_display(app_id, is_display, uid);
+	if (result == BADGE_ERROR_IO_ERROR)
+		result = BADGE_ERROR_FROM_DB;
+
+	return result;
+}
+
+EXPORT_API
+int badge_register_changed_cb_for_uid(badge_change_cb callback, void *data, uid_t uid)
+{
+	if (callback == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	return _badge_register_changed_cb(callback, data, uid);
+}
+
+EXPORT_API
+int badge_unregister_changed_cb_for_uid(badge_change_cb callback, uid_t uid)
+{
+	if (callback == NULL)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	return _badge_unregister_changed_cb(callback, uid);
+}

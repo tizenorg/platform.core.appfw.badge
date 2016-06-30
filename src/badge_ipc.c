@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <gio/gio.h>
+#include <unistd.h>
 
 #include <vconf.h>
 
@@ -216,9 +217,10 @@ static void _do_deferred_task(void)
 static void _insert_badge_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
+	uid_t uid;
 
-	g_variant_get(parameters, "(&s)", &pkgname);
-	badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0);
+	g_variant_get(parameters, "(&si)", &pkgname, &uid);
+	badge_changed_cb_call(BADGE_ACTION_CREATE, pkgname, 0, uid);
 }
 /* LCOV_EXCL_STOP */
 
@@ -226,9 +228,10 @@ static void _insert_badge_notify(GVariant *parameters)
 static void _delete_badge_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
+	uid_t uid;
 
-	g_variant_get(parameters, "(&s)", &pkgname);
-	badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0);
+	g_variant_get(parameters, "(&si)", &pkgname, &uid);
+	badge_changed_cb_call(BADGE_ACTION_REMOVE, pkgname, 0, uid);
 }
 /* LCOV_EXCL_STOP */
 
@@ -237,9 +240,10 @@ static void _set_badge_count_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
 	int count = 0;
+	uid_t uid;
 
-	g_variant_get(parameters, "(&si)", &pkgname, &count);
-	badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count);
+	g_variant_get(parameters, "(&sii)", &pkgname, &count, &uid);
+	badge_changed_cb_call(BADGE_ACTION_UPDATE, pkgname, count, uid);
 }
 /* LCOV_EXCL_STOP */
 
@@ -248,9 +252,10 @@ static void _set_disp_option_notify(GVariant *parameters)
 {
 	char *pkgname = NULL;
 	int is_display = 0;
+	uid_t uid;
 
-	g_variant_get(parameters, "(&si)", &pkgname, &is_display);
-	badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display);
+	g_variant_get(parameters, "(&sii)", &pkgname, &is_display, &uid);
+	badge_changed_cb_call(BADGE_ACTION_CHANGED_DISPLAY, pkgname, is_display, uid);
 }
 /* LCOV_EXCL_STOP */
 
@@ -391,26 +396,26 @@ static int _send_sync_badge(GVariant *body, GDBusMessage **reply, char *cmd)
 
 }
 
-static int _send_service_register()
+static int _send_service_register(uid_t uid)
 {
 	GDBusMessage *reply = NULL;
 	int result;
 
-	result = _send_sync_badge(g_variant_new("(i)", getuid()), &reply, "badge_service_register");
+	result = _send_sync_badge(g_variant_new("(i)", uid), &reply, "badge_service_register");
 
 	if (reply)
 		g_object_unref(reply);
 
-	badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0);
+	badge_changed_cb_call(BADGE_ACTION_SERVICE_READY, NULL, 0, uid);
 	DBG("_send_service_register dones");
 	return result;
 }
 
-static int _ipc_monitor_register(void)
+static int _ipc_monitor_register(uid_t uid)
 {
 	DBG("register a service\n");
 
-	return  _send_service_register();
+	return  _send_service_register(uid);
 }
 
 /* LCOV_EXCL_START */
@@ -421,7 +426,7 @@ static void _on_name_appeared(GDBusConnection *connection,
 {
 	DBG("name appeared : %s", name);
 	is_master_started = 1;
-	_ipc_monitor_register();
+	_ipc_monitor_register(GPOINTER_TO_INT(user_data));
 
 	_do_deferred_task();
 }
@@ -437,7 +442,7 @@ static void _on_name_vanished(GDBusConnection *connection,
 }
 /* LCOV_EXCL_STOP */
 
-int badge_ipc_monitor_init(void)
+int badge_ipc_monitor_init(uid_t uid)
 {
 	DBG("register a service\n");
 	int ret = BADGE_ERROR_NONE;
@@ -458,7 +463,7 @@ int badge_ipc_monitor_init(void)
 		/* LCOV_EXCL_STOP */
 	}
 
-	ret = _ipc_monitor_register();
+	ret = _ipc_monitor_register(uid);
 	if (ret != BADGE_ERROR_NONE) {
 		/* LCOV_EXCL_START */
 		ERR("Can't init ipc_monitor_register %d", ret);
@@ -473,7 +478,7 @@ int badge_ipc_monitor_init(void)
 				G_BUS_NAME_WATCHER_FLAGS_NONE,
 				_on_name_appeared,
 				_on_name_vanished,
-				NULL,
+				GINT_TO_POINTER((int)uid),
 				NULL);
 
 		if (provider_monitor_id == 0) {
@@ -503,7 +508,7 @@ int badge_ipc_monitor_fini(void)
 	return BADGE_ERROR_NONE;
 }
 
-int badge_ipc_request_is_existing(const char *pkgname, bool *existing)
+int badge_ipc_request_is_existing(const char *pkgname, bool *existing, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -516,7 +521,7 @@ int badge_ipc_request_is_existing(const char *pkgname, bool *existing)
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(s)", pkgname);
+	body = g_variant_new("(si)", pkgname, uid);
 
 	result = _send_sync_badge(body, &reply, "get_badge_existing");
 	if (result == BADGE_ERROR_NONE) {
@@ -532,12 +537,13 @@ int badge_ipc_request_is_existing(const char *pkgname, bool *existing)
 	return result;
 }
 
-int badge_ipc_request_get_list(badge_foreach_cb callback, void *data)
+int badge_ipc_request_get_list(badge_foreach_cb callback, void *data, uid_t uid)
 {
 	GDBusMessage *reply = NULL;
 	int result;
 	GVariant *reply_body;
 	GVariant *iter_body;
+	GVariant *body;
 	GVariantIter *iter;
 	badge_info_s badge;
 
@@ -549,7 +555,14 @@ int badge_ipc_request_get_list(badge_foreach_cb callback, void *data)
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	result = _send_sync_badge(NULL, &reply, "get_list");
+
+	body = g_variant_new("(i)", uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
+
+	result = _send_sync_badge(body, &reply, "get_list");
 	if (result == BADGE_ERROR_NONE) {
 		reply_body = g_dbus_message_get_body(reply);
 		g_variant_get(reply_body, "(a(v))", &iter);
@@ -567,7 +580,7 @@ int badge_ipc_request_get_list(badge_foreach_cb callback, void *data)
 	return result;
 }
 
-int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller)
+int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -579,7 +592,7 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 		return result;
 	}
 
-	body = g_variant_new("(sss)", pkgname, writable_pkg, caller);
+	body = g_variant_new("(sssi)", pkgname, writable_pkg, caller, uid);
 	if (!body) {
 		ERR("Cannot create gvariant. Out of memory.");
 		return BADGE_ERROR_OUT_OF_MEMORY;
@@ -594,7 +607,7 @@ int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, cons
 	return result;
 }
 
-int badge_ipc_request_delete(const char *pkgname, const char *caller)
+int badge_ipc_request_delete(const char *pkgname, const char *caller, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -605,7 +618,12 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller)
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(ss)", pkgname, caller);
+
+	body = g_variant_new("(ssi)", pkgname, caller, uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
 	result = _send_sync_badge(body, &reply, "delete_badge");
 
@@ -616,7 +634,7 @@ int badge_ipc_request_delete(const char *pkgname, const char *caller)
 	return result;
 }
 
-int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count)
+int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -627,7 +645,12 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(ssi)", pkgname, caller, count);
+
+	body = g_variant_new("(ssii)", pkgname, caller, count, uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
 	result = _send_sync_badge(body, &reply, "set_badge_count");
 
@@ -638,7 +661,7 @@ int badge_ipc_request_set_count(const char *pkgname, const char *caller, int cou
 	return result;
 }
 
-int badge_ipc_request_get_count(const char *pkgname, unsigned int *count)
+int badge_ipc_request_get_count(const char *pkgname, unsigned int *count, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -651,7 +674,12 @@ int badge_ipc_request_get_count(const char *pkgname, unsigned int *count)
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(s)", pkgname);
+
+	body = g_variant_new("(si)", pkgname, uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
 	result = _send_sync_badge(body, &reply, "get_badge_count");
 	if (result == BADGE_ERROR_NONE) {
@@ -667,7 +695,8 @@ int badge_ipc_request_get_count(const char *pkgname, unsigned int *count)
 	return result;
 }
 
-int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsigned int display_option)
+int badge_ipc_request_set_display(const char *pkgname, const char *caller,
+				  unsigned int display_option, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -678,7 +707,11 @@ int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsig
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(ssi)", pkgname, caller, display_option);
+	body = g_variant_new("(ssii)", pkgname, caller, display_option, uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
 	result = _send_sync_badge(body, &reply, "set_disp_option");
 	if (reply)
@@ -688,7 +721,7 @@ int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsig
 	return result;
 }
 
-int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display)
+int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display, uid_t uid)
 {
 	int result ;
 	GDBusMessage *reply = NULL;
@@ -701,7 +734,12 @@ int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display)
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(s)", pkgname);
+
+	body = g_variant_new("(si)", pkgname, uid);
+	if (!body) {
+		ERR("Cannot create gvariant. Out of memory.");
+		return BADGE_ERROR_OUT_OF_MEMORY;
+	}
 
 	result = _send_sync_badge(body, &reply, "get_disp_option");
 	if (result == BADGE_ERROR_NONE) {
@@ -717,7 +755,7 @@ int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display)
 	return result;
 }
 
-int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value)
+int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -728,7 +766,7 @@ int badge_ipc_setting_property_set(const char *pkgname, const char *property, co
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(sss)", pkgname, property, value);
+	body = g_variant_new("(sssi)", pkgname, property, value, uid);
 
 	result = _send_sync_badge(body, &reply, "set_noti_property");
 	if (reply)
@@ -738,7 +776,7 @@ int badge_ipc_setting_property_set(const char *pkgname, const char *property, co
 	return result;
 }
 
-int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value)
+int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value, uid_t uid)
 {
 	int result;
 	GDBusMessage *reply = NULL;
@@ -751,7 +789,7 @@ int badge_ipc_setting_property_get(const char *pkgname, const char *property, ch
 		ERR("Can't init dbus %d", result);
 		return result;
 	}
-	body = g_variant_new("(ss)", pkgname, property);
+	body = g_variant_new("(ssi)", pkgname, property, uid);
 
 	result = _send_sync_badge(body, &reply, "get_noti_property");
 	if (result == BADGE_ERROR_NONE) {
