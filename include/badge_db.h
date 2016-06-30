@@ -26,21 +26,22 @@
 
 #include <stdbool.h>
 #include <sqlite3.h>
+#include <sys/types.h>
 #include <badge_error.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller);
-int badge_db_delete(const char *pkgname, const char *caller_pkg);
-int badge_db_set_count(const char *pkgname, const char *caller_pkg, unsigned int count);
-int badge_db_get_count(const char *pkgname, unsigned int *count);
-int badge_db_set_display_option(const char *pkgname, const char *caller_pkg, unsigned int is_display);
-int badge_db_get_display_option(const char *pkgname, unsigned int *is_display);
+int badge_db_insert(const char *pkgname, const char *writable_pkg, const char *caller, uid_t uid);
+int badge_db_delete(const char *pkgname, const char *caller_pkg, uid_t uid);
+int badge_db_set_count(const char *pkgname, const char *caller_pkg, unsigned int count, uid_t uid);
+int badge_db_get_count(const char *pkgname, unsigned int *count, uid_t uid);
+int badge_db_set_display_option(const char *pkgname, unsigned int is_display, uid_t uid);
+int badge_db_get_display_option(const char *pkgname, unsigned int *is_display, uid_t uid);
 int badge_db_exec(sqlite3 *db, const char *query, int *num_changes);
-int badge_db_get_list(GList **badge_list);
-int badge_db_is_existing(const char *pkgname, bool *existing);
+int badge_db_get_list(GList **badge_list, uid_t uid);
+int badge_db_is_existing(const char *pkgname, bool *existing, uid_t uid);
 int badge_db_init();
 
 #ifdef __cplusplus
