@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <glib.h>
+#include <sys/types.h>
 
 #include "badge_error.h"
 #include "badge.h"
@@ -139,29 +140,28 @@ int badge_is_existing(const char *app_id, bool *existing);
 
 char *_badge_get_pkgname_by_pid(void);
 
-int _badge_is_existing(const char *pkgname, bool *existing);
+int _badge_is_existing(const char *pkgname, bool *existing, uid_t uid);
 
-int _badge_foreach_existed(badge_foreach_cb callback, void *data);
+int _badge_foreach_existed(badge_foreach_cb callback, void *data, uid_t uid);
 
-int _badge_get_list(GList **badge_list);
+int _badge_get_list(GList **badge_list, uid_t uid);
 
-int _badge_insert(badge_h *badge);
+int _badge_insert(badge_h *badge, uid_t uid);
 
-int _badge_remove(const char *caller, const char *pkgname);
+int _badge_remove(const char *caller, const char *pkgname, uid_t uid);
 
 int _badge_set_count(const char *caller, const char *pkgname,
-			unsigned int count);
+			unsigned int count, uid_t uid);
 
-int _badge_get_count(const char *pkgname, unsigned int *count);
+int _badge_get_count(const char *pkgname, unsigned int *count, uid_t uid);
 
-int _badge_set_display(const char *pkgname,
-			unsigned int is_display);
+int _badge_set_display(const char *pkgname, unsigned int is_display, uid_t uid);
 
-int _badge_get_display(const char *pkgname, unsigned int *is_display);
+int _badge_get_display(const char *pkgname, unsigned int *is_display, uid_t uid);
 
-int _badge_register_changed_cb(badge_change_cb callback, void *data);
+int _badge_register_changed_cb(badge_change_cb callback, void *data, uid_t uid);
 
-int _badge_unregister_changed_cb(badge_change_cb callback);
+int _badge_unregister_changed_cb(badge_change_cb callback, uid_t uid);
 
 int _badge_free(badge_h *badge);
 
@@ -174,7 +174,7 @@ char *_badge_pkgs_new_valist(int *err,
 			const char *pkg1, va_list args);
 
 void badge_changed_cb_call(unsigned int action, const char *pkgname,
-			unsigned int count);
+			unsigned int count, uid_t uid);
 
 /**
  * @internal
@@ -203,6 +203,32 @@ void badge_changed_cb_call(unsigned int action, const char *pkgname,
  * @endcode
  */
 int badge_create(const char *pkgname, const char *writable_pkg);
+
+
+int badge_create_for_uid(const char *pkgname, const char *writable_pkg, uid_t uid);
+
+int badge_new_for_uid(const char *writable_app_id, uid_t uid);
+
+int badge_add_for_uid(const char *badge_app_id, uid_t uid);
+
+int badge_remove_for_uid(const char *app_id, uid_t uid);
+
+int badge_is_existing_for_uid(const char *app_id, bool *existing, uid_t uid);
+
+int badge_foreach_for_uid(badge_foreach_cb callback, void *user_data, uid_t uid);
+
+int badge_set_count_for_uid(const char *app_id, unsigned int count, uid_t uid);
+
+int badge_get_count_for_uid(const char *app_id, unsigned int *count, uid_t uid);
+
+int badge_set_display_for_uid(const char *app_id, unsigned int is_display, uid_t uid);
+
+int badge_get_display_for_uid(const char *app_id, unsigned int *is_display, uid_t uid);
+
+int badge_register_changed_cb_for_uid(badge_change_cb callback, void *data, uid_t uid);
+
+int badge_unregister_changed_cb_for_uid(badge_change_cb callback, uid_t uid);
+
 
 #ifdef __cplusplus
 }

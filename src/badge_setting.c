@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include <sqlite3.h>
 #include <db-util.h>
 #include <tzplatform_config.h>
@@ -139,7 +140,7 @@ free_and_return:
 	return result;
 }
 
-EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, const char *value)
+EXPORT_API int badge_setting_db_set(const char *pkgname, const char *property, const char *value, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -201,7 +202,7 @@ return_close_db:
 	return result;
 }
 
-EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, char **value)
+EXPORT_API int badge_setting_db_get(const char *pkgname, const char *property, char **value, uid_t uid)
 {
 	int ret = BADGE_ERROR_NONE;
 	int result = BADGE_ERROR_NONE;
@@ -287,7 +288,7 @@ return_close_db:
 	return result;
 }
 
-EXPORT_API int badge_setting_property_set(const char *pkgname, const char *property, const char *value)
+EXPORT_API int badge_setting_property_set_for_uid(const char *pkgname, const char *property, const char *value, uid_t uid)
 {
 	int ret = 0;
 
@@ -300,7 +301,32 @@ EXPORT_API int badge_setting_property_set(const char *pkgname, const char *prope
 	if (!value)
 		return BADGE_ERROR_INVALID_PARAMETER;
 
-	ret = badge_ipc_setting_property_set(pkgname, property, value);
+	ret = badge_ipc_setting_property_set(pkgname, property, value, uid);
+	if (ret != BADGE_ERROR_NONE)
+		return ret;
+
+	return BADGE_ERROR_NONE;
+}
+
+EXPORT_API int badge_setting_property_set(const char *pkgname, const char *property, const char *value)
+{
+	return badge_setting_property_set_for_uid(pkgname, property, value, getuid());
+}
+
+EXPORT_API int badge_setting_property_get_for_uid(const char *pkgname, const char *property, char **value, uid_t uid)
+{
+	int ret = 0;
+
+	if (!pkgname)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	if (!property)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	if (!value)
+		return BADGE_ERROR_INVALID_PARAMETER;
+
+	ret = badge_ipc_setting_property_get(pkgname, property, value, uid);
 	if (ret != BADGE_ERROR_NONE)
 		return ret;
 
@@ -309,20 +335,5 @@ EXPORT_API int badge_setting_property_set(const char *pkgname, const char *prope
 
 EXPORT_API int badge_setting_property_get(const char *pkgname, const char *property, char **value)
 {
-	int ret = 0;
-
-	if (!pkgname)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!property)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	if (!value)
-		return BADGE_ERROR_INVALID_PARAMETER;
-
-	ret = badge_ipc_setting_property_get(pkgname, property, value);
-	if (ret != BADGE_ERROR_NONE)
-		return ret;
-
-	return BADGE_ERROR_NONE;
+	return badge_setting_property_get_for_uid(pkgname, property, value, getuid());
 }
