@@ -24,6 +24,7 @@
 #define __BADGE_IPC_H__
 
 #include <badge.h>
+#include <sys/types.h>
 
 #define BADGE_ADDR "/tmp/.badge.service"
 
@@ -33,25 +34,25 @@ extern "C" {
 
 struct packet;
 
-int badge_ipc_monitor_init(void);
+int badge_ipc_monitor_init(uid_t uid);
 int badge_ipc_monitor_fini(void);
 
-int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller);
-int badge_ipc_request_delete(const char *pkgname, const char *caller);
-int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count);
-int badge_ipc_request_get_count(const char *pkgname, unsigned int *count);
-int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsigned int display_option);
-int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display);
+int badge_ipc_request_insert(const char *pkgname, const char *writable_pkg, const char *caller, uid_t uid);
+int badge_ipc_request_delete(const char *pkgname, const char *caller, uid_t uid);
+int badge_ipc_request_set_count(const char *pkgname, const char *caller, int count, uid_t uid);
+int badge_ipc_request_get_count(const char *pkgname, unsigned int *count, uid_t uid);
+int badge_ipc_request_set_display(const char *pkgname, const char *caller, unsigned int display_option, uid_t uid);
+int badge_ipc_request_get_display(const char *pkgname, unsigned int *is_display, uid_t uid);
 
 int badge_ipc_is_master_ready(void);
 int badge_ipc_add_deferred_task(void (*badge_add_deferred_task)(void *data), void *user_data);
 int badge_ipc_del_deferred_task(void (*badge_add_deferred_task)(void *data));
 
-int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value);
-int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value);
+int badge_ipc_setting_property_set(const char *pkgname, const char *property, const char *value, uid_t uid);
+int badge_ipc_setting_property_get(const char *pkgname, const char *property, char **value, uid_t uid);
 
-int badge_ipc_request_get_list(badge_foreach_cb callback, void *data);
-int badge_ipc_request_is_existing(const char *pkgname, bool *existing);
+int badge_ipc_request_get_list(badge_foreach_cb callback, void *data, uid_t uid);
+int badge_ipc_request_is_existing(const char *pkgname, bool *existing, uid_t uid);
 
 #ifdef __cplusplus
 }
