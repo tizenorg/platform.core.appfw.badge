@@ -17,6 +17,7 @@
  *
  */
 
+#include <string.h>
 #include <gio/gio.h>
 #include "badge_error.h"
 
@@ -33,10 +34,26 @@ static const GDBusErrorEntry dbus_error_entries[] = {
 	{BADGE_ERROR_INVALID_PACKAGE, "org.freedesktop.Badge.Error.INVALID_PACKAGE"},
 };
 
+#define BADGE_ERROR_QUARK "badge-error-quark"
+
 EXPORT_API GQuark badge_error_quark(void)
 {
 	static volatile gsize quark_volatile = 0;
-	g_dbus_error_register_error_domain("badge-error-quark",
+	static char *domain_name = NULL;
+
+	/* This is for preventing crash when notification api is used in ui-gadget     */
+	/* ui-gadget libraries can be unloaded when it is needed and the static string */
+	/* parameter to g_dbus_error_register_error_domain may cause crash.             */
+	GQuark quark = g_quark_try_string(BADGE_ERROR_QUARK);
+
+	if (quark == 0) {
+		if (domain_name == NULL)
+			domain_name = strdup(BADGE_ERROR_QUARK);
+	} else {
+		domain_name = BADGE_ERROR_QUARK;
+	}
+
+	g_dbus_error_register_error_domain(domain_name,
 			&quark_volatile,
 			dbus_error_entries,
 			G_N_ELEMENTS(dbus_error_entries));
